@@ -7,6 +7,9 @@ import com.opsera.pipelineassistant.analysis.ScoringEngine;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
+import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,70 +29,91 @@ public class AnalysisService {
     private final PatternMatcher patternMatcher;
     private final ScoringEngine scoringEngine;
     private final ResponseTemplater responseTemplater;
+    private final MeterRegistry meterRegistry;
 
     public AnalyzedLog analyze(String logText) {
         log.info("Starting analysis, logTextLength={}", logText != null ? logText.length() : 0);
 
-        String sanitizedLog;
+        // Start timer using system clock — does not touch the registry so it is safe
+        // even when MeterRegistry is unavailable in test contexts.
+        Timer.Sample sample = Timer.start(Clock.SYSTEM);
+
         try {
-            sanitizedLog = logSanitizer.sanitize(logText);
-            if (sanitizedLog == null) {
-                sanitizedLog = "";
+            String sanitizedLog;
+            try {
+                sanitizedLog = logSanitizer.sanitize(logText);
+                if (sanitizedLog == null) {
+                    sanitizedLog = "";
+                }
+            } catch (Exception e) {
+                log.warn("Log sanitization failed, aborting to prevent raw log persistence");
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Analysis failed. Please try again.");
             }
-        } catch (Exception e) {
-            log.warn("Log sanitization failed, aborting to prevent raw log persistence");
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Analysis failed. Please try again.");
+
+            // 1. Fetch knowledge base entries — served from Caffeine cache after first call
+            List<ErrorKnowledgeBase> entries = knowledgeBaseService.getAllEntries();
+
+            // 2. Score each entry against the sanitized log
+            List<ScoredMatch> scored = patternMatcher.match(sanitizedLog, entries);
+
+            // 3. Select best match (first-wins on ties via strict >)
+            ScoredMatch best = scored.stream()
+                    .filter(sm -> sm.score() > 0)
+                    .reduce((a, b) -> b.score() > a.score() ? b : a)
+                    .orElse(null);
+
+            int confidence;
+            String category;
+            String rootCause;
+            String suggestedFix;
+            String severity;
+            String customerUpdate;
+
+            if (best != null) {
+                // 4-5. Delegate confidence and response to extracted beans
+                confidence = scoringEngine.calculateConfidence(best.score(), best.totalPatterns());
+                category = best.entry().getCategory();
+                rootCause = best.entry().getRootCause();
+                suggestedFix = best.entry().getSolution();
+                severity = best.entry().getSeverity();
+                customerUpdate = responseTemplater.generate(category, rootCause, suggestedFix);
+            } else {
+                confidence = scoringEngine.calculateConfidence(0, 0);
+                category = "Unclassified";
+                rootCause = "Unable to determine root cause from the provided log.";
+                suggestedFix = "Please review the log manually or contact support.";
+                severity = "MEDIUM";
+                customerUpdate = responseTemplater.generateUnclassified();
+            }
+
+            // 6. Build entity and persist
+            AnalyzedLog result = AnalyzedLog.builder()
+                    .logText(sanitizedLog)
+                    .category(category)
+                    .rootCause(rootCause)
+                    .suggestedFix(suggestedFix)
+                    .customerUpdate(customerUpdate)
+                    .severity(severity)
+                    .confidence(confidence)
+                    .build();
+
+            // 7. Record analysis.requests counter with detected category tag
+            try {
+                meterRegistry.counter("analysis.requests", "category", category).increment();
+            } catch (Exception metricEx) {
+                log.warn("Failed to record analysis.requests metric: {}", metricEx.getMessage());
+            }
+
+            log.info("Analysis complete, category={}, confidence={}", category, confidence);
+            return analyzedLogRepository.save(result);
+        } finally {
+            // Always record latency even when an exception propagates
+            try {
+                sample.stop(meterRegistry.timer("analysis.duration"));
+            } catch (Exception metricEx) {
+                log.warn("Failed to record analysis.duration metric: {}", metricEx.getMessage());
+            }
         }
-
-        // 1. Fetch knowledge base entries — served from Caffeine cache after first call
-        List<ErrorKnowledgeBase> entries = knowledgeBaseService.getAllEntries();
-
-        // 2. Score each entry against the sanitized log
-        List<ScoredMatch> scored = patternMatcher.match(sanitizedLog, entries);
-
-        // 3. Select best match (first-wins on ties via strict >)
-        ScoredMatch best = scored.stream()
-                .filter(sm -> sm.score() > 0)
-                .reduce((a, b) -> b.score() > a.score() ? b : a)
-                .orElse(null);
-
-        int confidence;
-        String category;
-        String rootCause;
-        String suggestedFix;
-        String severity;
-        String customerUpdate;
-
-        if (best != null) {
-            // 4-5. Delegate confidence and response to extracted beans
-            confidence = scoringEngine.calculateConfidence(best.score(), best.totalPatterns());
-            category = best.entry().getCategory();
-            rootCause = best.entry().getRootCause();
-            suggestedFix = best.entry().getSolution();
-            severity = best.entry().getSeverity();
-            customerUpdate = responseTemplater.generate(category, rootCause, suggestedFix);
-        } else {
-            confidence = scoringEngine.calculateConfidence(0, 0);
-            category = "Unclassified";
-            rootCause = "Unable to determine root cause from the provided log.";
-            suggestedFix = "Please review the log manually or contact support.";
-            severity = "MEDIUM";
-            customerUpdate = responseTemplater.generateUnclassified();
-        }
-
-        // 6. Build entity and persist
-        AnalyzedLog result = AnalyzedLog.builder()
-                .logText(sanitizedLog)
-                .category(category)
-                .rootCause(rootCause)
-                .suggestedFix(suggestedFix)
-                .customerUpdate(customerUpdate)
-                .severity(severity)
-                .confidence(confidence)
-                .build();
-
-        log.info("Analysis complete, category={}, confidence={}", category, confidence);
-        return analyzedLogRepository.save(result);
     }
 
     public List<AnalyzedLog> getHistory() {

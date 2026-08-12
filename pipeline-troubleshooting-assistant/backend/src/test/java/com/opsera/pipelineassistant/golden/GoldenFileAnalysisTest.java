@@ -11,6 +11,7 @@ import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
 import com.opsera.pipelineassistant.service.AnalysisService;
 import com.opsera.pipelineassistant.service.KnowledgeBaseService;
 import com.opsera.pipelineassistant.service.LogSanitizer;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +50,9 @@ class GoldenFileAnalysisTest {
 
     @Mock
     private AnalyzedLogRepository analyzedLogRepository;
+
+    @Mock
+    private MeterRegistry meterRegistry;
 
     @Mock
     private LogSanitizer logSanitizer;

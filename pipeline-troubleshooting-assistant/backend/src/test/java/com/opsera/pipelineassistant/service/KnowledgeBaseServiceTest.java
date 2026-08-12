@@ -2,6 +2,8 @@ package com.opsera.pipelineassistant.service;
 
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.ErrorRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,6 +27,9 @@ class KnowledgeBaseServiceTest {
 
     @Mock
     private ErrorRepository errorRepository;
+
+    @Mock
+    private MeterRegistry meterRegistry;
 
     @InjectMocks
     private KnowledgeBaseService knowledgeBaseService;
@@ -178,5 +183,48 @@ class KnowledgeBaseServiceTest {
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         verify(errorRepository, never()).deleteById(any());
+    }
+
+    // ── 10. create increments kb.operations counter with tag operation=create ─
+    @Test
+    void shouldIncrementKbOperationsCounterOnCreate() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        KnowledgeBaseService svc = new KnowledgeBaseService(errorRepository, registry);
+
+        ErrorKnowledgeBase input = buildKnowledgeBaseEntity(null, "p", "C", "R", "S", "LOW");
+        when(errorRepository.save(input)).thenReturn(input);
+
+        svc.create(input);
+
+        assertThat(registry.counter("kb.operations", "operation", "create").count()).isEqualTo(1.0);
+    }
+
+    // ── 11. update increments kb.operations counter with tag operation=update ─
+    @Test
+    void shouldIncrementKbOperationsCounterOnUpdate() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        KnowledgeBaseService svc = new KnowledgeBaseService(errorRepository, registry);
+
+        ErrorKnowledgeBase existing = buildKnowledgeBaseEntity(5L, "old", "OldCat", "OldR", "OldS", "LOW");
+        when(errorRepository.findById(5L)).thenReturn(Optional.of(existing));
+        when(errorRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        svc.update(5L, buildKnowledgeBaseEntity(null, "new", "NewCat", "NewR", "NewS", "HIGH"));
+
+        assertThat(registry.counter("kb.operations", "operation", "update").count()).isEqualTo(1.0);
+    }
+
+    // ── 12. delete increments kb.operations counter with tag operation=delete ─
+    @Test
+    void shouldIncrementKbOperationsCounterOnDelete() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        KnowledgeBaseService svc = new KnowledgeBaseService(errorRepository, registry);
+
+        ErrorKnowledgeBase existing = buildKnowledgeBaseEntity(3L, "p", "C", "R", "S", "LOW");
+        when(errorRepository.findById(3L)).thenReturn(Optional.of(existing));
+
+        svc.delete(3L);
+
+        assertThat(registry.counter("kb.operations", "operation", "delete").count()).isEqualTo(1.0);
     }
 }

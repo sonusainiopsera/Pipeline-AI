@@ -1,6 +1,8 @@
 package com.opsera.pipelineassistant.exception;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -16,11 +19,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@RequiredArgsConstructor
 @Slf4j
 public class ApiExceptionHandler {
 
     private static final String LOG_TEXT_SIZE_MESSAGE =
             "Log text exceeds maximum length of 100,000 characters";
+
+    private final MeterRegistry meterRegistry;
 
     /**
      * Handles @Valid/@Validated constraint failures on request body DTOs.
@@ -37,6 +43,8 @@ public class ApiExceptionHandler {
         boolean isLogTextSizeViolation = fieldErrors.stream()
                 .anyMatch(fe -> "logText".equals(fe.getField())
                         && LOG_TEXT_SIZE_MESSAGE.equals(fe.getDefaultMessage()));
+
+        recordErrorMetric("validation_error");
 
         if (isLogTextSizeViolation) {
             log.warn("Validation failed: exceptionClass={}, status={}, path={}",
@@ -67,5 +75,43 @@ public class ApiExceptionHandler {
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("errors", errors);
         return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatus(ResponseStatusException ex,
+                                                                      HttpServletRequest request) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        String errorType = (status == HttpStatus.NOT_FOUND) ? "not_found" : "internal_error";
+        recordErrorMetric(errorType);
+
+        log.warn("Request failed: exceptionClass={}, status={}, path={}",
+                ex.getClass().getSimpleName(), ex.getStatusCode().value(), request.getRequestURI());
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("message", ex.getReason() != null ? ex.getReason() : ex.getMessage());
+        body.put("status", ex.getStatusCode().value());
+        return ResponseEntity.status(ex.getStatusCode()).body(body);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex, HttpServletRequest request) {
+        recordErrorMetric("internal_error");
+        log.error("Unhandled exception: exceptionClass={}, path={}",
+                ex.getClass().getSimpleName(), request.getRequestURI(), ex);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("message", "An unexpected error occurred");
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
+    private void recordErrorMetric(String errorType) {
+        try {
+            meterRegistry.counter("analysis.errors", "error_type", errorType).increment();
+        } catch (Exception metricEx) {
+            log.warn("Failed to record analysis.errors metric: {}", metricEx.getMessage());
+        }
     }
 }

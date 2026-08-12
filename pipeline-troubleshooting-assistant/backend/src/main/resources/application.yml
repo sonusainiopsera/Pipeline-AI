@@ -57,3 +57,6 @@ management:
   metrics:
     tags:
       application: pipeline-assistant
+    distribution:
+      percentiles-histogram:
+        analysis.duration: true

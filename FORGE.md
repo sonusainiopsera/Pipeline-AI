@@ -308,3 +308,10 @@
 - **Files:** 6 (+400/-0)
 - **Duration:** 278ss
 - **Approach:** Created Responses.java as a final class with private constructor containing the HistoryListDTO record — following the existing project pattern. HistoryListDTO has 7 fields (id, detectedCategory, rootCause, suggestedFix, severity, confidence, createdAt) deliberately excluding logText and customerUpdate per data classification policy. Added a static from() factory method mapping AnalyzedLog.category to detectedCategory. Extended AnalyzedLogRepository with Page<AnalyzedLog> findAllByOrderByCreatedAtDesc(Pageable) via Spring Data JPA derived query, keeping the existing findTop50 method intact. Added V3 Flyway migration for a DESC index on analyzed_logs.created_at for pagination performance.
+
+## WO-062: User Story: WO-062 - Instrument Backend with Micrometer Custom Metrics
+- **Status:** completed
+- **Commit:** `ffbeab8`
+- **Files:** 10 (+571/-56)
+- **Duration:** 637ss
+- **Approach:** Created MetricsConfig with a pre-registered Timer bean for analysis.duration (publishPercentileHistogram enabled) and placeholder Counter beans for auth.events (4 event_type values) and cache.operations (2 result values). Services inject MeterRegistry via @RequiredArgsConstructor and record dynamic-tag counters inline. All metric calls are wrapped in try-catch so failures never propagate to callers. Timer.Sample uses Clock.SYSTEM at start so no registry is needed until stop(), placed in a try-finally to guarantee recording even when exceptions occur. Added ResponseStatusException and catch-all Exception handlers to ApiExceptionHandler for complete error coverage.

@@ -8,6 +8,8 @@ import com.opsera.pipelineassistant.analysis.ScoringProperties;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +35,9 @@ class AnalysisServiceTest {
 
     @Mock
     private AnalyzedLogRepository analyzedLogRepository;
+
+    @Mock
+    private MeterRegistry meterRegistry;
 
     @Mock
     private LogSanitizer logSanitizer;
@@ -326,5 +331,63 @@ class AnalysisServiceTest {
 
         assertThat(captor.getValue().getLogText()).isEqualTo(sanitizedOutput);
         assertThat(captor.getValue().getLogText()).isNotEqualTo(rawLog);
+    }
+
+    // ── 17. Timer records latency for each analysis call ─────────────────────
+    @Test
+    void shouldRecordAnalysisDurationTimerForEachCall() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        AnalysisService service = new AnalysisService(
+                knowledgeBaseService, analyzedLogRepository, logSanitizer,
+                patternMatcher, scoringEngine, responseTemplater, registry);
+        lenient().when(logSanitizer.sanitize(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(Collections.emptyList());
+        when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.analyze("some pipeline log");
+        service.analyze("another log");
+
+        assertThat(registry.timer("analysis.duration").count()).isEqualTo(2);
+    }
+
+    // ── 18. analysis.requests counter incremented with category tag ────────────
+    @Test
+    void shouldIncrementRequestsCounterWithDetectedCategoryTag() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        AnalysisService service = new AnalysisService(
+                knowledgeBaseService, analyzedLogRepository, logSanitizer,
+                patternMatcher, scoringEngine, responseTemplater, registry);
+        lenient().when(logSanitizer.sanitize(anyString())).thenAnswer(inv -> inv.getArgument(0));
+
+        ErrorKnowledgeBase entry = ErrorKnowledgeBase.builder()
+                .id(1L)
+                .errorPattern("OutOfMemoryError,heap")
+                .category("Memory")
+                .rootCause("Heap exhausted")
+                .solution("Increase -Xmx")
+                .severity("HIGH")
+                .build();
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
+        when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.analyze("OutOfMemoryError heap overflow");
+
+        assertThat(registry.counter("analysis.requests", "category", "Memory").count()).isEqualTo(1.0);
+    }
+
+    // ── 19. Unclassified analysis still increments counter with tag 'Unclassified'
+    @Test
+    void shouldIncrementRequestsCounterWithUnclassifiedTagWhenNoMatch() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        AnalysisService service = new AnalysisService(
+                knowledgeBaseService, analyzedLogRepository, logSanitizer,
+                patternMatcher, scoringEngine, responseTemplater, registry);
+        lenient().when(logSanitizer.sanitize(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(Collections.emptyList());
+        when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.analyze("no matching patterns here");
+
+        assertThat(registry.counter("analysis.requests", "category", "Unclassified").count()).isEqualTo(1.0);
     }
 }

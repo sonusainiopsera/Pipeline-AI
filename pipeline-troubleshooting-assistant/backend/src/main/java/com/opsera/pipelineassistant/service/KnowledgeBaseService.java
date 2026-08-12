@@ -2,6 +2,7 @@ package com.opsera.pipelineassistant.service;
 
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.ErrorRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -18,6 +19,7 @@ import java.util.List;
 public class KnowledgeBaseService {
 
     private final ErrorRepository errorRepository;
+    private final MeterRegistry meterRegistry;
 
     /**
      * Returns all knowledge base entries, serving from the in-process Caffeine cache
@@ -46,6 +48,11 @@ public class KnowledgeBaseService {
     public ErrorKnowledgeBase create(ErrorKnowledgeBase entry) {
         ErrorKnowledgeBase saved = errorRepository.save(entry);
         log.info("Knowledge base entry created, id={}, category={}", saved.getId(), saved.getCategory());
+        try {
+            meterRegistry.counter("kb.operations", "operation", "create").increment();
+        } catch (Exception metricEx) {
+            log.warn("Failed to record kb.operations metric: {}", metricEx.getMessage());
+        }
         return saved;
     }
 
@@ -59,6 +66,11 @@ public class KnowledgeBaseService {
         existing.setSeverity(entry.getSeverity());
         ErrorKnowledgeBase saved = errorRepository.save(existing);
         log.info("Knowledge base entry updated, id={}, category={}", saved.getId(), saved.getCategory());
+        try {
+            meterRegistry.counter("kb.operations", "operation", "update").increment();
+        } catch (Exception metricEx) {
+            log.warn("Failed to record kb.operations metric: {}", metricEx.getMessage());
+        }
         return saved;
     }
 
@@ -67,5 +79,10 @@ public class KnowledgeBaseService {
         findById(id);
         errorRepository.deleteById(id);
         log.info("Knowledge base entry deleted, id={}", id);
+        try {
+            meterRegistry.counter("kb.operations", "operation", "delete").increment();
+        } catch (Exception metricEx) {
+            log.warn("Failed to record kb.operations metric: {}", metricEx.getMessage());
+        }
     }
 }
