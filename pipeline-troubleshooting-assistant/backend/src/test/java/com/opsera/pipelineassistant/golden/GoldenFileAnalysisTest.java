@@ -1,6 +1,8 @@
 package com.opsera.pipelineassistant.golden;
 
 import com.opsera.pipelineassistant.analysis.PatternMatcher;
+import com.opsera.pipelineassistant.analysis.ResponseProperties;
+import com.opsera.pipelineassistant.analysis.ResponseTemplater;
 import com.opsera.pipelineassistant.analysis.ScoringEngine;
 import com.opsera.pipelineassistant.analysis.ScoringProperties;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
@@ -58,6 +60,10 @@ class GoldenFileAnalysisTest {
     // Real ScoringEngine with default config — ensures golden confidence values remain stable
     @Spy
     private ScoringEngine scoringEngine = new ScoringEngine(new ScoringProperties());
+
+    // Real ResponseTemplater with default config — ensures golden customerUpdate strings remain stable
+    @Spy
+    private ResponseTemplater responseTemplater = new ResponseTemplater(new ResponseProperties());
 
     @InjectMocks
     private AnalysisService analysisService;

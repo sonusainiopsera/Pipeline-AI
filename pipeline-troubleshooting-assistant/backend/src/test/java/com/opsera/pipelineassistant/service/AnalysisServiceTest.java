@@ -1,6 +1,8 @@
 package com.opsera.pipelineassistant.service;
 
 import com.opsera.pipelineassistant.analysis.PatternMatcher;
+import com.opsera.pipelineassistant.analysis.ResponseProperties;
+import com.opsera.pipelineassistant.analysis.ResponseTemplater;
 import com.opsera.pipelineassistant.analysis.ScoringEngine;
 import com.opsera.pipelineassistant.analysis.ScoringProperties;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
@@ -45,6 +47,11 @@ class AnalysisServiceTest {
     // match the previously hardcoded constants (55, 43, 98).
     @Spy
     private ScoringEngine scoringEngine = new ScoringEngine(new ScoringProperties());
+
+    // Use a real ResponseTemplater with default configuration so customerUpdate strings
+    // match the previously hardcoded template format.
+    @Spy
+    private ResponseTemplater responseTemplater = new ResponseTemplater(new ResponseProperties());
 
     @InjectMocks
     private AnalysisService analysisService;

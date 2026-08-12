@@ -1,6 +1,7 @@
 package com.opsera.pipelineassistant.service;
 
 import com.opsera.pipelineassistant.analysis.PatternMatcher;
+import com.opsera.pipelineassistant.analysis.ResponseTemplater;
 import com.opsera.pipelineassistant.analysis.ScoredMatch;
 import com.opsera.pipelineassistant.analysis.ScoringEngine;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
@@ -25,6 +26,7 @@ public class AnalysisService {
     private final LogSanitizer logSanitizer;
     private final PatternMatcher patternMatcher;
     private final ScoringEngine scoringEngine;
+    private final ResponseTemplater responseTemplater;
 
     public AnalyzedLog analyze(String logText) {
         String sanitizedLog;
@@ -65,18 +67,14 @@ public class AnalysisService {
             rootCause = bestMatch.getRootCause();
             suggestedFix = bestMatch.getSolution();
             severity = bestMatch.getSeverity();
-            customerUpdate = String.format(
-                "We have identified the root cause of your pipeline failure as: %s. "
-                    + "We recommend the following action: %s",
-                rootCause, suggestedFix
-            );
+            customerUpdate = responseTemplater.generate(category, rootCause, suggestedFix);
         } else {
             confidence = scoringEngine.calculateConfidence(0, 0);
             category = "Unclassified";
             rootCause = "Unable to determine root cause from the provided log.";
             suggestedFix = "Please review the log manually or contact support.";
             severity = "MEDIUM";
-            customerUpdate = "We are investigating the pipeline failure and will provide an update shortly.";
+            customerUpdate = responseTemplater.generateUnclassified();
         }
 
         AnalyzedLog result = AnalyzedLog.builder()
