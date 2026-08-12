@@ -560,3 +560,10 @@
 - **Files:** 3 (+199/-0)
 - **Duration:** 293ss
 - **Approach:** The AnalyzedLog entity already had a nullable @ManyToOne User user field mapped to user_id FK (added by V2 migration), and the DB column/index already existed. The remaining work was: (1) adding UserRepository to AnalysisService, (2) adding extractCurrentUser() to get the email from SecurityContextHolder, look up the User entity, and return null gracefully for anonymous/unauthenticated requests, (3) wiring .user(extractCurrentUser()) into the AnalyzedLog.builder() in analyze(), and (4) adding findByUser_IdOrderByCreatedAtDesc(UUID userId) to AnalyzedLogRepository using Spring Data JPA nested property syntax. No new DB migration was needed since the schema was already up to date.
+
+## WO-035: User Story: WO-035 - Implement Audit Logging for Auth Events
+- **Status:** completed
+- **Commit:** `c52a7f3`
+- **Files:** 6 (+472/-13)
+- **Duration:** 725ss
+- **Approach:** The audit infrastructure (AuditLog entity, AuditService, AuditLogRepository, DB migration V2) already existed. This WO adds: (1) IpAddressUtil utility checking X-Forwarded-For then X-Real-IP then getRemoteAddr(); (2) public static final constants for 8 auth action names and 2 resource types on AuditService; (3) AuditService.resolveClientIp() refactored to delegate to IpAddressUtil (adds X-Real-IP support); (4) findByResourceTypeAndCreatedAtBetween added to AuditLogRepository; (5) AuditService injected into AuthService via @RequiredArgsConstructor with 13 logEvent call-sites covering all 8 required event types, each wrapped in try-catch to prevent audit failures from affecting primary auth flows.

@@ -2,6 +2,7 @@ package com.opsera.pipelineassistant.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opsera.pipelineassistant.audit.AuditService;
 import com.opsera.pipelineassistant.dto.Responses.LoginResponse;
 import com.opsera.pipelineassistant.dto.Responses.LoginResult;
 import com.opsera.pipelineassistant.dto.Responses.RefreshResult;
@@ -30,6 +31,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -49,6 +51,7 @@ public class AuthService {
     private final MfaService mfaService;
     private final AesEncryptionUtil aesEncryptionUtil;
     private final ObjectMapper objectMapper;
+    private final AuditService auditService;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationSeconds;
@@ -57,15 +60,34 @@ public class AuthService {
     public LoginResult login(String email, String password) {
         String normalizedEmail = email.trim().toLowerCase();
 
-        User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                        "Invalid email or password"));
+        User user = userRepository.findByEmail(normalizedEmail).orElse(null);
+        if (user == null) {
+            try {
+                auditService.logEvent(AuditService.LOGIN_FAILURE, AuditService.RESOURCE_USER,
+                        normalizedEmail, Map.of("email", normalizedEmail, "reason", "unknown_email"));
+            } catch (Exception e) {
+                log.warn("Failed to audit login failure for '{}': {}", normalizedEmail, e.getMessage());
+            }
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
 
         if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+            try {
+                auditService.logEvent(AuditService.LOGIN_FAILURE, AuditService.RESOURCE_USER,
+                        user.getId().toString(), Map.of("email", normalizedEmail, "reason", "email_not_verified"));
+            } catch (Exception e) {
+                log.warn("Failed to audit login failure for '{}': {}", normalizedEmail, e.getMessage());
+            }
             throw new EmailNotVerifiedException("Please verify your email before logging in");
         }
 
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
+            try {
+                auditService.logEvent(AuditService.LOGIN_FAILURE, AuditService.RESOURCE_USER,
+                        user.getId().toString(), Map.of("email", normalizedEmail, "reason", "account_locked"));
+            } catch (Exception e) {
+                log.warn("Failed to audit login failure for '{}': {}", normalizedEmail, e.getMessage());
+            }
             throw new AccountLockedException(
                     "Account locked due to too many failed attempts. Try again in 15 minutes.");
         }
@@ -83,6 +105,12 @@ public class AuthService {
                 log.warn("Account '{}' locked after {} failed login attempts", normalizedEmail, attempts);
             }
             userRepository.save(user);
+            try {
+                auditService.logEvent(AuditService.LOGIN_FAILURE, AuditService.RESOURCE_USER,
+                        user.getId().toString(), Map.of("email", normalizedEmail, "reason", "invalid_credentials"));
+            } catch (Exception e) {
+                log.warn("Failed to audit login failure for '{}': {}", normalizedEmail, e.getMessage());
+            }
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
 
@@ -102,7 +130,14 @@ public class AuthService {
         userRepository.save(user);
 
         log.info("Login successful for '{}'", normalizedEmail);
-        return issueFullTokens(user);
+        LoginResult loginResult = issueFullTokens(user);
+        try {
+            auditService.logEvent(AuditService.LOGIN_SUCCESS, AuditService.RESOURCE_USER,
+                    user.getId().toString(), Map.of("email", normalizedEmail));
+        } catch (Exception e) {
+            log.warn("Failed to audit login success for '{}': {}", normalizedEmail, e.getMessage());
+        }
+        return loginResult;
     }
 
     @Transactional
@@ -136,11 +171,24 @@ public class AuthService {
         }
 
         if (!mfaService.verifyCode(decryptedSecret, code)) {
+            try {
+                auditService.logEvent(AuditService.MFA_VERIFY_FAILURE, AuditService.RESOURCE_USER,
+                        user.getId().toString(), Map.of("email", email, "reason", "invalid_code"));
+            } catch (Exception e) {
+                log.warn("Failed to audit MFA verify failure for '{}': {}", email, e.getMessage());
+            }
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authentication code");
         }
 
         log.info("MFA challenge verified for '{}'", email);
-        return issueFullTokens(user);
+        LoginResult mfaResult = issueFullTokens(user);
+        try {
+            auditService.logEvent(AuditService.MFA_VERIFY_SUCCESS, AuditService.RESOURCE_USER,
+                    user.getId().toString(), Map.of("email", email));
+        } catch (Exception e) {
+            log.warn("Failed to audit MFA verify success for '{}': {}", email, e.getMessage());
+        }
+        return mfaResult;
     }
 
     @Transactional
@@ -191,6 +239,12 @@ public class AuthService {
 
         if (matchIndex == -1) {
             userRepository.save(user);
+            try {
+                auditService.logEvent(AuditService.MFA_VERIFY_FAILURE, AuditService.RESOURCE_USER,
+                        user.getId().toString(), Map.of("email", email, "reason", "invalid_recovery_code"));
+            } catch (Exception e) {
+                log.warn("Failed to audit MFA recovery failure for '{}': {}", email, e.getMessage());
+            }
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid recovery code");
         }
 
@@ -212,7 +266,15 @@ public class AuthService {
 
         userRepository.save(user);
         log.info("MFA recovery used for '{}' — {} codes remaining", email, remaining);
-        return issueFullTokens(user);
+        LoginResult recoveryResult = issueFullTokens(user);
+        try {
+            auditService.logEvent(AuditService.MFA_VERIFY_SUCCESS, AuditService.RESOURCE_USER,
+                    user.getId().toString(),
+                    Map.of("email", email, "method", "recovery_code", "remainingCodes", remaining));
+        } catch (Exception e) {
+            log.warn("Failed to audit MFA recovery success for '{}': {}", email, e.getMessage());
+        }
+        return recoveryResult;
     }
 
     private LoginResult issueFullTokens(User user) {
@@ -262,6 +324,12 @@ public class AuthService {
         User saved = userRepository.save(user);
         emailService.sendVerificationEmail(normalizedEmail, token);
         log.info("Registered user '{}' — verification email dispatched", normalizedEmail);
+        try {
+            auditService.logEvent(AuditService.REGISTRATION, AuditService.RESOURCE_USER,
+                    saved.getId().toString(), Map.of("email", normalizedEmail));
+        } catch (Exception e) {
+            log.warn("Failed to audit registration for '{}': {}", normalizedEmail, e.getMessage());
+        }
         return saved;
     }
 
@@ -282,6 +350,12 @@ public class AuthService {
         user.setVerificationTokenExpiry(null);
         userRepository.save(user);
         log.info("Email verified for '{}'", user.getEmail());
+        try {
+            auditService.logEvent(AuditService.EMAIL_VERIFIED, AuditService.RESOURCE_USER,
+                    user.getId().toString(), Map.of("email", user.getEmail()));
+        } catch (Exception e) {
+            log.warn("Failed to audit email verification for '{}': {}", user.getEmail(), e.getMessage());
+        }
     }
 
     @Transactional
@@ -315,7 +389,14 @@ public class AuthService {
                 .build());
 
         log.debug("Refresh token rotated for user '{}'", user.getEmail());
-        return new RefreshResult(newAccessToken, newRawRefreshToken);
+        RefreshResult refreshResult = new RefreshResult(newAccessToken, newRawRefreshToken);
+        try {
+            auditService.logEvent(AuditService.TOKEN_REFRESH, AuditService.RESOURCE_SESSION,
+                    user.getId().toString(), Map.of("email", user.getEmail()));
+        } catch (Exception e) {
+            log.warn("Failed to audit token refresh for '{}': {}", user.getEmail(), e.getMessage());
+        }
+        return refreshResult;
     }
 
     @Transactional
@@ -329,6 +410,11 @@ public class AuthService {
             log.debug("Refresh token invalidated on logout");
         } catch (Exception e) {
             log.warn("Logout token cleanup failed: {}", e.getMessage());
+        }
+        try {
+            auditService.logEvent(AuditService.LOGOUT, AuditService.RESOURCE_SESSION, null, null);
+        } catch (Exception e) {
+            log.warn("Failed to audit logout: {}", e.getMessage());
         }
     }
 
