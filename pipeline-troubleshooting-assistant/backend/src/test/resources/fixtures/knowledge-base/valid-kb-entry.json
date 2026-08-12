@@ -1,0 +1,7 @@
+{
+  "errorPattern": "OutOfMemoryError.*Java heap space",
+  "category": "Memory",
+  "rootCause": "Java heap space exhausted during pipeline execution",
+  "solution": "Increase JVM heap size using -Xmx flag or optimize memory usage in the build",
+  "severity": "high"
+}

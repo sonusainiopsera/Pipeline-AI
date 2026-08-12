@@ -61,6 +61,8 @@ export interface KnowledgeBaseRequest {
   severity: string;
 }
 
+export type UserRole = 'ANALYST' | 'KB_ADMIN' | 'MANAGER';
+
 // ── Auth types ────────────────────────────────────────────────────────────────
 
 export interface LoginRequest {

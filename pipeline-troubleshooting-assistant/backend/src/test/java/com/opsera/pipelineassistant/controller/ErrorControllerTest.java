@@ -263,4 +263,67 @@ class ErrorControllerTest {
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.errors[0].field").value("severity"));
     }
+
+    // ── 16. POST /api/errors with invalid severity returns 400 ───────────────
+    @Test
+    void shouldReturn400WhenSeverityIsInvalidValue() throws Exception {
+        ErrorRequest request = buildRequest("oom,heap", "Memory", "Heap exhausted", "Increase Xmx", "EXTREME");
+
+        mockMvc.perform(post("/api/errors")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("severity"))
+                .andExpect(jsonPath("$.errors[0].message").value("Severity must be one of: low, medium, high, critical"));
+    }
+
+    // ── 17. POST /api/errors with ROLE_ANALYST returns 403 ───────────────────
+    @Test
+    @WithMockUser(roles = "ANALYST")
+    void shouldReturn403WhenAnalystAttemptsCreate() throws Exception {
+        ErrorRequest request = buildRequest("oom,heap", "Memory", "Heap exhausted", "Increase Xmx", "HIGH");
+
+        mockMvc.perform(post("/api/errors")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    // ── 18. DELETE /api/errors/{id} with ROLE_ANALYST returns 403 ────────────
+    @Test
+    @WithMockUser(roles = "ANALYST")
+    void shouldReturn403WhenAnalystAttemptsDelete() throws Exception {
+        mockMvc.perform(delete("/api/errors/1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    // ── 19. PUT /api/errors/{id} with ROLE_ANALYST returns 403 ───────────────
+    @Test
+    @WithMockUser(roles = "ANALYST")
+    void shouldReturn403WhenAnalystAttemptsUpdate() throws Exception {
+        ErrorRequest request = buildRequest("oom,heap", "Memory", "Heap exhausted", "Increase Xmx", "HIGH");
+
+        mockMvc.perform(put("/api/errors/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    // ── 20. GET /api/errors with ROLE_ANALYST returns 200 ────────────────────
+    @Test
+    @WithMockUser(roles = "ANALYST")
+    void shouldReturn200WhenAnalystReadsList() throws Exception {
+        when(knowledgeBaseService.findAll()).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/errors"))
+                .andExpect(status().isOk());
+    }
 }

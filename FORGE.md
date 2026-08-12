@@ -588,3 +588,10 @@
 - **Files:** 3 (+135/-2)
 - **Duration:** 516ss
 - **Approach:** LogSanitizer.java, AnalysisService.java (sanitize() call), LogSanitizerTest.java, and fixture files under src/test/resources/sanitization/ were already present from a prior WO. The remaining work was: (1) add boolean sanitized field to AnalysisResponse in Responses.java with from() hardcoded to true since sanitization is unconditionally applied; (2) add a @WebMvcTest test verifying sanitized=true in the POST /api/analyze JSON response; (3) create AnalysisServiceSanitizationTest.java with four Mockito argument-captor tests confirming sanitize() is called before save() and that the persisted logText equals the sanitizer output.
+
+## WO-077: User Story: WO-077 - Secure Knowledge Base CRUD with Role Validation
+- **Status:** completed
+- **Commit:** `86b2c56`
+- **Files:** 8 (+197/-76)
+- **Duration:** 425ss
+- **Approach:** The majority of backend security was already implemented: ErrorController had @PreAuthorize('hasAnyRole(KB_ADMIN, MANAGER)') on mutations and @PreAuthorize('hasAnyRole(ANALYST, KB_ADMIN, MANAGER)') on GET, @ResponseStatus(CREATED) on create, @ResponseStatus(NO_CONTENT) on delete, SecurityConfig had @EnableMethodSecurity, KnowledgeBaseService.delete() called findById() for not-found protection, ErrorRequest had @Size constraints, KnowledgeBaseServiceTest and ErrorControllerTest existed. The remaining work was: (1) add @Pattern to ErrorRequest.severity for enum validation; (2) add 403 role-restriction tests and invalid-severity test to ErrorControllerTest; (3) add UserRole type to types.ts; (4) add getUserRole() helper to api.ts; (5) update KnowledgeBase.tsx to fetch the user role on mount and conditionally hide Add/Edit/Delete controls for non-KB_ADMIN/MANAGER roles; (6) create knowledge-base fixture files.

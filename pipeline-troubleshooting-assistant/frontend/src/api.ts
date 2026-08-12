@@ -13,6 +13,7 @@ import type {
   MfaVerifyRequest,
   PageResponse,
   RegisterRequest,
+  UserRole,
 } from './types';
 
 export type {
@@ -30,6 +31,7 @@ export type {
   MfaVerifyRequest,
   PageResponse,
   RegisterRequest,
+  UserRole,
 };
 
 const BASE = '/api';
@@ -170,6 +172,15 @@ export async function logout(): Promise<AuthMessageResponse> {
 
 export async function getMe(): Promise<LoginResponse> {
   return request<LoginResponse>(`${BASE}/auth/me`);
+}
+
+export async function getUserRole(): Promise<UserRole | null> {
+  try {
+    const user = await getMe();
+    return (user.role as UserRole) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function mfaSetup(): Promise<MfaSetupResponse> {

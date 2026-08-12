@@ -1,0 +1,7 @@
+{
+  "errorPattern": "connection refused.*timeout",
+  "category": "Network",
+  "rootCause": "Service endpoint unreachable during build",
+  "solution": "Check network connectivity and firewall rules",
+  "severity": "EXTREME"
+}
