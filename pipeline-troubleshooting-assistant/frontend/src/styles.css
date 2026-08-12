@@ -210,6 +210,18 @@ p, td, th, li, pre, code {
   outline: none;
 }
 
+/* ─── Skeleton loader ────────────────────────────────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.skeleton-item {
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
 /* ─── Skip navigation link ───────────────────────────────────────────────── */
 .skip-link {
   position: absolute;

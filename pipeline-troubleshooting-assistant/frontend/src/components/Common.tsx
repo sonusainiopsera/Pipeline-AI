@@ -34,3 +34,28 @@ export function ErrorDisplay({ message }: { message: string }) {
     </p>
   );
 }
+
+export function SkeletonLoader({ rows = 5 }: { rows?: number }) {
+  return (
+    <div role="status" aria-busy="true" aria-label="Loading history">
+      {Array.from({ length: rows }, (_, i) => (
+        <div
+          key={i}
+          style={{
+            padding: '12px 0',
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div className="skeleton-item" style={{ height: '14px', width: '130px' }} />
+          <div className="skeleton-item" style={{ height: '20px', width: '70px', borderRadius: '10px' }} />
+          <div className="skeleton-item" style={{ height: '14px', width: '110px' }} />
+          <div className="skeleton-item" style={{ height: '14px', flex: 1, minWidth: '100px' }} />
+        </div>
+      ))}
+    </div>
+  );
+}

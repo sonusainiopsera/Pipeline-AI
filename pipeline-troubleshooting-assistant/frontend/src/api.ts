@@ -1,3 +1,36 @@
+export interface HistoryListItem {
+  id: number;
+  detectedCategory: string;
+  rootCause: string;
+  suggestedFix: string;
+  severity: string;
+  confidence: number;
+  createdAt: string;
+}
+
+export interface HistoryItem {
+  id: number;
+  logText: string | null;
+  detectedCategory: string;
+  rootCause: string;
+  suggestedFix: string;
+  customerUpdate: string;
+  severity: string;
+  confidence: number;
+  createdAt: string;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
 export interface AnalyzedLog {
   id: number;
   logText?: string;
@@ -44,6 +77,18 @@ export async function getHistory(): Promise<AnalyzedLog[]> {
   const res = await fetch(`${BASE}/history`);
   if (!res.ok) throw new Error(`Failed to fetch history: ${res.statusText}`);
   return res.json() as Promise<AnalyzedLog[]>;
+}
+
+export async function history(page = 0, size = 20): Promise<PageResponse<HistoryListItem>> {
+  const res = await fetch(`${BASE}/history?page=${page}&size=${size}`);
+  if (!res.ok) throw new Error(`Failed to fetch history: ${res.statusText}`);
+  return res.json() as Promise<PageResponse<HistoryListItem>>;
+}
+
+export async function historyDetail(id: number): Promise<HistoryItem> {
+  const res = await fetch(`${BASE}/history/${id}`);
+  if (!res.ok) throw new Error(`Failed to fetch history detail: ${res.statusText}`);
+  return res.json() as Promise<HistoryItem>;
 }
 
 export async function getKnowledgeBase(): Promise<KnowledgeBaseEntry[]> {
