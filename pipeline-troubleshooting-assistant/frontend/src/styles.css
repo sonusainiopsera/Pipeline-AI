@@ -1,3 +1,165 @@
+/* ─── Responsive breakpoints ─────────────────────────────────────────────── */
+/* --bp-mobile  320px  — minimum supported viewport (WCAG 1.4.10 Reflow)    */
+/* --bp-phablet 480px  — larger phones                                       */
+/* --bp-tablet  768px  — sidebar collapses threshold                         */
+/* --bp-desktop 1024px — wider desktop                                       */
+
+/* ─── Global overflow guard — WCAG 1.4.10 Reflow ────────────────────────── */
+/* Prevents any child from causing horizontal scrolling at 320px viewport   */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Long unbroken strings (log text, KB error patterns) must not overflow */
+p, td, th, li, pre, code {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* ─── Mobile sidebar overlay ─────────────────────────────────────────────── */
+/* On mobile the sidebar becomes a fixed overlay; CSS overrides inline styles */
+@media (max-width: 767px) {
+  .sidebar-nav {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100% !important;
+    width: 220px !important;   /* override JS-driven width */
+    transform: translateX(-100%);
+    transition: transform 0.2s ease, width 0s !important;
+    z-index: 200;
+  }
+
+  .sidebar-nav.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Main content fills full width when sidebar is off-screen */
+  #main-content {
+    padding: 16px !important;
+  }
+}
+
+/* ─── Sidebar backdrop ───────────────────────────────────────────────────── */
+/* Rendered in DOM when sidebar is open; hidden on desktop via CSS           */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 199;
+  /* Below modal z-index (500) so modals remain on top */
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .sidebar-backdrop {
+    display: block;
+  }
+}
+
+/* ─── Touch target minimum sizes (WCAG 2.5.5) ────────────────────────────── */
+/* Buttons, inputs, and selects must be ≥ 44×44 px on touch screens          */
+@media (max-width: 767px) {
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  /* Nav items get taller padding on mobile */
+  .sidebar-nav button {
+    padding-top: 14px !important;
+    padding-bottom: 14px !important;
+  }
+}
+
+/* ─── Dashboard stat card grid ───────────────────────────────────────────── */
+/* Auto-reflows via minmax; explicit breakpoints enforce AC4 column counts   */
+.dashboard-grid {
+  display: grid;
+  gap: 16px;
+  /* ≥768px: auto-fill, cards at least 220px → 2-3+ columns */
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+@media (max-width: 767px) and (min-width: 481px) {
+  /* 480–767px: two columns */
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  /* ≤480px: single column per AC4 */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── History page — responsive table ───────────────────────────────────── */
+/* Wraps table in a scroll container; on very narrow viewports the table    */
+/* can scroll horizontally within the container without causing page reflow  */
+.table-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  /* Reduce column padding so table fits better */
+  .table-scroll-container td,
+  .table-scroll-container th {
+    padding: 6px 4px !important;
+    font-size: 0.85em;
+  }
+
+  /* Hide Date and Confidence columns on mobile to reduce column count */
+  .table-scroll-container .col-date,
+  .table-scroll-container .col-confidence {
+    display: none;
+  }
+}
+
+/* ─── Knowledge Base — responsive table ─────────────────────────────────── */
+.kb-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .kb-table-container td,
+  .kb-table-container th {
+    padding: 6px 4px !important;
+    font-size: 0.85em;
+  }
+
+  /* Hide Severity column on mobile to reduce column count */
+  .kb-table-container .col-severity {
+    display: none;
+  }
+}
+
+/* ─── Analyze page layout ────────────────────────────────────────────────── */
+.analyze-layout {
+  width: 100%;
+}
+
+/* Ensure textarea and inputs don't overflow their containers */
+.analyze-layout textarea,
+.analyze-layout input {
+  max-width: 100%;
+}
+
 /* ─── WCAG AA color palette – all semantic roles in one place ─────────────
    Contrast ratios verified against WCAG 2.1 AA:
      Normal text  ≥ 4.5:1

@@ -23,6 +23,7 @@ export default function HistoryPage() {
   return (
     <div>
       <h2>Analysis History</h2>
+      <div className="table-scroll-container">
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
         <thead>
           <tr style={{
@@ -30,10 +31,10 @@ export default function HistoryPage() {
             // #64748b on #f8fafc: ~4.0:1 — passes 3:1 UI boundary ✓
             borderBottom: '2px solid #64748b',
           }}>
-            <th style={{ padding: '8px' }}>Date</th>
+            <th className="col-date" style={{ padding: '8px' }}>Date</th>
             <th style={{ padding: '8px' }}>Category</th>
             <th style={{ padding: '8px' }}>Severity</th>
-            <th style={{ padding: '8px' }}>Confidence</th>
+            <th className="col-confidence" style={{ padding: '8px' }}>Confidence</th>
             <th style={{ padding: '8px' }}>Actions</th>
           </tr>
         </thead>
@@ -41,10 +42,10 @@ export default function HistoryPage() {
           {logs.map((log) => (
             <React.Fragment key={log.id}>
               <tr style={{ borderBottom: '1px solid #64748b' }}>
-                <td style={{ padding: '8px' }}>{new Date(log.createdAt).toLocaleString()}</td>
+                <td className="col-date" style={{ padding: '8px' }}>{new Date(log.createdAt).toLocaleString()}</td>
                 <td style={{ padding: '8px' }}>{log.category}</td>
                 <td style={{ padding: '8px' }}>{log.severity}</td>
-                <td style={{ padding: '8px' }}>{log.confidence}%</td>
+                <td className="col-confidence" style={{ padding: '8px' }}>{log.confidence}%</td>
                 <td style={{ padding: '8px' }}>
                   <button
                     type="button"
@@ -82,6 +83,7 @@ export default function HistoryPage() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

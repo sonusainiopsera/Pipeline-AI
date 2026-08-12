@@ -196,13 +196,14 @@ export default function KnowledgeBasePage() {
       )}
 
       {!loading && !error && entries.length > 0 && (
+        <div className="kb-table-container">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
           <thead>
             {/* #64748b border: ~4.0:1 on #f8fafc — passes 3:1 UI boundary ✓ */}
           <tr style={{ textAlign: 'left', borderBottom: '2px solid #64748b' }}>
               <th style={{ padding: '8px' }}>Error Pattern</th>
               <th style={{ padding: '8px' }}>Category</th>
-              <th style={{ padding: '8px' }}>Severity</th>
+              <th className="col-severity" style={{ padding: '8px' }}>Severity</th>
               <th style={{ padding: '8px' }}>Actions</th>
             </tr>
           </thead>
@@ -213,7 +214,7 @@ export default function KnowledgeBasePage() {
                   {entry.errorPattern}
                 </td>
                 <td style={{ padding: '8px' }}>{entry.category}</td>
-                <td style={{ padding: '8px' }}>{entry.severity}</td>
+                <td className="col-severity" style={{ padding: '8px' }}>{entry.severity}</td>
                 <td style={{ padding: '8px' }}>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
@@ -264,6 +265,7 @@ export default function KnowledgeBasePage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       {/* Add / Edit modal */}

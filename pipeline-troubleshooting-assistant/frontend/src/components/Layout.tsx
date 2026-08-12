@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PanelLeftClose, PanelLeftOpen, BarChart2, Search, BookOpen, Clock } from 'lucide-react';
 import SkipLink from './SkipLink';
 
@@ -24,14 +24,64 @@ interface LayoutProps {
 }
 
 export default function Layout({ page, onNavigate, children }: LayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // On mobile (< 768px) sidebar starts closed; on desktop it starts open.
+  // Lazy initialiser runs once on mount so there is no flash-of-wrong-state.
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
+
+  // When viewport crosses the 768px boundary, auto-close on shrink and
+  // auto-open on expand so the layout is always in a sensible default state.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        // Became mobile — close sidebar so it doesn't overlay content
+        setSidebarOpen(false);
+      } else {
+        // Became desktop — open sidebar by default
+        setSidebarOpen(true);
+      }
+    };
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
+  }, []);
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // On mobile: toggle label describes opening/closing the overlay menu.
+  // On desktop: toggle describes collapsing/expanding the sidebar panel.
+  const toggleLabel = isMobile
+    ? sidebarOpen ? 'Close navigation menu' : 'Open navigation menu'
+    : sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar';
+
+  const closeSidebar = () => setSidebarOpen(false);
 
   return (
     <>
       <SkipLink />
+
+      {/* Semi-transparent backdrop rendered when mobile sidebar is open.
+          CSS hides it on desktop so there is no visual impact there. */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={closeSidebar}
+          aria-hidden="true"
+          data-testid="sidebar-backdrop"
+        />
+      )}
+
       <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-        {/* Sidebar navigation */}
+        {/* Sidebar navigation.
+            .sidebar-nav — targeted by responsive CSS in styles.css
+            .mobile-open — CSS class that slides the overlay into view on mobile */}
         <nav
+          id="sidebar-nav"
+          className={`sidebar-nav${sidebarOpen ? ' mobile-open' : ''}`}
           aria-label="Primary navigation"
           style={{
             width: sidebarOpen ? '220px' : '60px',
@@ -71,7 +121,7 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
             <button
               type="button"
               onClick={() => setSidebarOpen((open) => !open)}
-              aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+              aria-label={toggleLabel}
               aria-expanded={sidebarOpen}
               aria-controls="sidebar-nav-list"
               style={{
@@ -103,7 +153,13 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
               <li key={item.id}>
                 <button
                   type="button"
-                  onClick={() => onNavigate(item.id)}
+                  onClick={() => {
+                    onNavigate(item.id);
+                    // Close mobile sidebar after navigation
+                    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                      setSidebarOpen(false);
+                    }
+                  }}
                   aria-current={page === item.id ? 'page' : undefined}
                   style={{
                     width: '100%',

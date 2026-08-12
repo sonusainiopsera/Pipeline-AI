@@ -36,7 +36,7 @@ export default function AnalyzePage() {
   };
 
   return (
-    <div>
+    <div className="analyze-layout">
       <h2>Analyze Pipeline Log</h2>
 
       <div style={{ marginBottom: '16px' }}>

@@ -25,13 +25,7 @@ export default function DashboardPage() {
       {error && <ErrorDisplay message={error} />}
 
       {!loading && !error && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '16px',
-          }}
-        >
+        <div className="dashboard-grid">
           <div
             style={{
               padding: '20px',
