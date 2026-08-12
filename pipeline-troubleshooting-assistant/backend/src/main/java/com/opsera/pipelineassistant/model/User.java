@@ -20,17 +20,19 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String passwordHash;
 
     @Column(length = 100, nullable = false)
     private String displayName;
 
+    @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
-    private String role;
+    @Builder.Default
+    private Role role = Role.ANALYST;
 
     @Column(columnDefinition = "TEXT")
     private String mfaSecret;

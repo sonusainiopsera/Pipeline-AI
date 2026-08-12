@@ -378,3 +378,10 @@
 - **Files:** 2 (+3/-3)
 - **Duration:** 259ss
 - **Approach:** Changed <java.version>17</java.version> to <java.version>21</java.version> in pom.xml. Updated both stages of the multi-stage Dockerfile: build stage from eclipse-temurin:17-jdk-alpine to eclipse-temurin:21-jdk-alpine and runtime stage from eclipse-temurin:17-jre-alpine to eclipse-temurin:21-jre-alpine. No Lombok version pin required — Spring Boot 3.3.5 BOM manages Lombok 1.18.32 which is Java 21 compatible (>= 1.18.28 required). No source code changes made per the WO constraint. docker-compose.yml required no changes as it contains no Java version references, only a build context pointer to ./backend.
+
+## WO-018: User Story: WO-018 - Create User Entity and Repository
+- **Status:** completed
+- **Commit:** `cb09d09`
+- **Files:** 5 (+200/-3)
+- **Duration:** 235ss
+- **Approach:** Created Role.java enum in the model package (consistent with all other entities in this project per WO-015 prior-changes) with values ANALYST, KB_ADMIN, MANAGER. Updated User.java's role field from String to Role enum with @Enumerated(EnumType.STRING), @Column(length=20, nullable=false), and @Builder.Default(Role.ANALYST). Added explicit length=255 to email and passwordHash columns as specified. Extended UserRepository with existsByEmail(String) returning boolean alongside the existing findByEmail method. Created UserTestFactory in a new testutil package (matching the WO-specified path) with six builder-pattern factory methods covering all role values and common test scenarios. Created UserRepositoryTest with @DataJpaTest @ActiveProfiles('test') and seven tests covering all acceptance criteria scenarios.
