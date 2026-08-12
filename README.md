@@ -110,6 +110,12 @@ mvn verify
 
 The JaCoCo coverage report is generated at `target/site/jacoco/index.html`.
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Secret Management Runbook](docs/runbooks/secret-management.md) | Secret inventory, rotation procedures, incident response playbook, environment guidance, and production secret store roadmap |
+
 ## API Endpoints
 
 | Method | Path | Description |

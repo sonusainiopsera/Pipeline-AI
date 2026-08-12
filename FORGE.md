@@ -98,3 +98,10 @@
 - **Files:** 5 (+268/-0)
 - **Duration:** 710ss
 - **Approach:** Implemented a shell-script-based pre-commit hook (zero external dependencies beyond git and GNU grep) using grep -P (PCRE) patterns for six secret types: AWS access keys (AKIA[A-Z0-9]{16}), generic API/secret keys, Bearer tokens (≥20 chars), quoted password assignments, private key headers (BEGIN RSA/EC/OPENSSH PRIVATE KEY), and JDBC URLs with embedded credentials. Used grep -nP -e to avoid pattern-starts-with-dash mis-parsing. Excluded test source files (/src/test/, *.test.ts, *.spec.ts etc.) from scanning since AnalysisIntegrationTest.java and sanitization.test.ts intentionally contain fake credentials for testing the sanitizer. Added CI secret-scan job mirroring the same six patterns against all tracked files; simulation confirmed zero findings. Created a six-pattern test fixture (one fake value per pattern), install script (git config core.hooksPath), and README section.
+
+## WO-012: User Story: WO-012 - Document Secret Rotation Runbook and Operational Procedures
+- **Status:** completed
+- **Commit:** `9e03d57`
+- **Files:** 2 (+413/-0)
+- **Duration:** 228ss
+- **Approach:** Created docs/runbooks/secret-management.md as a comprehensive operational runbook covering all five required sections. Read .env.example to enumerate all current secrets accurately. Used placeholder syntax throughout (no real credentials). Structured the runbook with a ToC, secret inventory table for 9 variables (7 current + 2 future), PostgreSQL rotation procedure with pre-rotation checklist, step-by-step commands, verification steps, rollback procedure, and common failure mode table, JWT and MFA placeholder procedures with key impact notes, incident response playbook with severity classification and all five steps (rotate, investigate, BFG history rewrite, notify with timelines, post-incident review), environment-specific guidance for all four tiers, and a three-option comparison table (HashiCorp Vault / AWS Secrets Manager / Docker Secrets) with recommendation rationale and phased migration path. Updated README.md with a Documentation section linking to the runbook.
