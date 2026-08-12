@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: auth-optional
   application:
     name: pipeline-assistant
   datasource:
