@@ -2,6 +2,7 @@ package com.opsera.pipelineassistant.controller;
 
 import com.opsera.pipelineassistant.dto.AnalyzeRequest;
 import com.opsera.pipelineassistant.dto.Responses.AnalysisResponse;
+import com.opsera.pipelineassistant.dto.Responses.DashboardResponse;
 import com.opsera.pipelineassistant.dto.Responses.HistoryDetailDTO;
 import com.opsera.pipelineassistant.dto.Responses.HistoryListDTO;
 import com.opsera.pipelineassistant.service.AnalysisService;
@@ -19,7 +20,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -60,7 +60,7 @@ public class AnalysisController {
 
     @PreAuthorize("hasAnyRole('ANALYST', 'KB_ADMIN', 'MANAGER')")
     @GetMapping("/dashboard")
-    public Map<String, Object> getDashboard() {
+    public DashboardResponse getDashboard() {
         log.info("GET /api/dashboard received");
         return dashboardService.getStats();
     }

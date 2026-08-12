@@ -595,3 +595,10 @@
 - **Files:** 8 (+197/-76)
 - **Duration:** 425ss
 - **Approach:** The majority of backend security was already implemented: ErrorController had @PreAuthorize('hasAnyRole(KB_ADMIN, MANAGER)') on mutations and @PreAuthorize('hasAnyRole(ANALYST, KB_ADMIN, MANAGER)') on GET, @ResponseStatus(CREATED) on create, @ResponseStatus(NO_CONTENT) on delete, SecurityConfig had @EnableMethodSecurity, KnowledgeBaseService.delete() called findById() for not-found protection, ErrorRequest had @Size constraints, KnowledgeBaseServiceTest and ErrorControllerTest existed. The remaining work was: (1) add @Pattern to ErrorRequest.severity for enum validation; (2) add 403 role-restriction tests and invalid-severity test to ErrorControllerTest; (3) add UserRole type to types.ts; (4) add getUserRole() helper to api.ts; (5) update KnowledgeBase.tsx to fetch the user role on mount and conditionally hide Add/Edit/Delete controls for non-KB_ADMIN/MANAGER roles; (6) create knowledge-base fixture files.
+
+## WO-078: User Story: WO-078 - Build Dashboard Statistics Backend API Endpoint
+- **Status:** completed
+- **Commit:** `1b6477c`
+- **Files:** 7 (+336/-66)
+- **Duration:** 590ss
+- **Approach:** Extended the existing DashboardService and AnalyzedLogRepository to support the 4 new aggregate metrics. Added typed DashboardResponse and CategoryStat records to Responses.java. Added 3 JPQL queries to the repository (AVG confidence with Optional return, time-range COUNT with @Param, and top-N category query using Pageable for H2/PostgreSQL portability). Rewrote DashboardService.getStats() to populate all fields including topCategories with percentage calculation. Updated AnalysisController to return the typed record instead of Map<String, Object>.

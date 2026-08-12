@@ -4,10 +4,24 @@ import com.opsera.pipelineassistant.model.AnalyzedLog;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public final class Responses {
 
     private Responses() {}
+
+    public record CategoryStat(String category, long count, double percentage) {}
+
+    public record DashboardResponse(
+            long totalErrors,
+            long analyzedLogs,
+            String mostCommonIssue,
+            Map<String, Long> categoryBreakdown,
+            int averageConfidence,
+            long analysesLast7Days,
+            long analysesLast30Days,
+            List<CategoryStat> topCategories
+    ) {}
 
     public record RegisterResponse(String message) {}
 

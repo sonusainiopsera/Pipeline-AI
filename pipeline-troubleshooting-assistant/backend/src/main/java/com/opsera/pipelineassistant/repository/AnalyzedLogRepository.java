@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -25,6 +26,15 @@ public interface AnalyzedLogRepository extends JpaRepository<AnalyzedLog, Long> 
 
     @Query("SELECT a.category, COUNT(a) FROM AnalyzedLog a GROUP BY a.category")
     List<Object[]> categoryCounts();
+
+    @Query("SELECT AVG(a.confidence) FROM AnalyzedLog a")
+    Optional<Double> findAverageConfidence();
+
+    @Query("SELECT COUNT(a) FROM AnalyzedLog a WHERE a.createdAt > :since")
+    Long countByCreatedAtAfter(@Param("since") LocalDateTime since);
+
+    @Query("SELECT a.category, COUNT(a) FROM AnalyzedLog a WHERE a.category IS NOT NULL GROUP BY a.category ORDER BY COUNT(a) DESC")
+    List<Object[]> findTopCategoriesByCount(Pageable pageable);
 
     @Modifying
     @Transactional
