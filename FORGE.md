@@ -63,3 +63,10 @@
 - **Files:** 2 (+108/-0)
 - **Duration:** 256ss
 - **Approach:** Created .github/workflows/ci.yml at the repository root (the only path GitHub Actions recognises) with two parallel jobs: 'backend' and 'frontend'. The backend job provisions a postgres:16-alpine service container with test credentials, sets defaults.run.working-directory to pipeline-troubleshooting-assistant/backend, caches ~/.m2/repository keyed on pom.xml hash, runs mvn clean verify with DB_URL/DB_USERNAME/DB_PASSWORD env vars pointing to the service container, and publishes JUnit XML reports via dorny/test-reporter. The frontend job caches ~/.npm keyed on package-lock.json hash, then runs npm ci + npm test + npm run build from pipeline-troubleshooting-assistant/frontend. A concurrency group cancels in-progress runs on the same branch. Added a GitHub Actions status badge to README.md at the top.
+
+## WO-065: User Story: WO-065 - Multi-Stage Docker Builds for Optimized Container Images
+- **Status:** completed
+- **Commit:** `2a0b893`
+- **Files:** 6 (+107/-2)
+- **Duration:** 363ss
+- **Approach:** Created a multi-stage backend Dockerfile from scratch (no Dockerfile existed for the backend) using eclipse-temurin:17-jdk-alpine + apk-installed Maven as the builder stage and eclipse-temurin:17-jre-alpine as the minimal runtime stage. The builder uses pom.xml-first layer caching via mvn dependency:go-offline so the dependency download layer is only invalidated when pom.xml changes. The runtime stage creates a non-root appuser and includes a HEALTHCHECK calling the Spring Boot Actuator health endpoint via wget. Rewrote the frontend Dockerfile from node:20 to node:22-alpine builder with package*.json-first layer caching and a VITE_API_URL build arg, and nginx:stable-alpine runtime with a custom nginx.conf providing SPA try_files routing, /api/ reverse proxy to backend:8080, gzip compression, and long-lived cache headers. Added .dockerignore files for both services to exclude build artifacts, IDE directories, and secrets from the Docker build context. Updated docker-compose.yml to forward VITE_API_URL as a build arg to the frontend service.
