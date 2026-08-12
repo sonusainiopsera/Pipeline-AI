@@ -301,3 +301,10 @@
 - **Files:** 10 (+301/-25)
 - **Duration:** 465ss
 - **Approach:** Added Caffeine in-process caching for the knowledge base query path. CacheConfig registers a CaffeineCacheManager with a 'knowledgeBase' cache (max 1000 entries, TTL from configurable property). KnowledgeBaseService.getAllEntries() is the @Cacheable cache boundary — AnalysisService calls through this bean (different Spring proxy) to avoid the self-invocation trap. CRUD mutators carry @CacheEvict(allEntries=true) to ensure stale entries are never served after writes. AnalysisServiceTest and GoldenFileAnalysisTest were updated to mock KnowledgeBaseService instead of ErrorRepository.
+
+## WO-056: User Story: WO-056 - Create HistoryListDTO and Paginated Repository Query
+- **Status:** completed
+- **Commit:** `d6438a7`
+- **Files:** 6 (+400/-0)
+- **Duration:** 278ss
+- **Approach:** Created Responses.java as a final class with private constructor containing the HistoryListDTO record — following the existing project pattern. HistoryListDTO has 7 fields (id, detectedCategory, rootCause, suggestedFix, severity, confidence, createdAt) deliberately excluding logText and customerUpdate per data classification policy. Added a static from() factory method mapping AnalyzedLog.category to detectedCategory. Extended AnalyzedLogRepository with Page<AnalyzedLog> findAllByOrderByCreatedAtDesc(Pageable) via Spring Data JPA derived query, keeping the existing findTop50 method intact. Added V3 Flyway migration for a DESC index on analyzed_logs.created_at for pagination performance.
