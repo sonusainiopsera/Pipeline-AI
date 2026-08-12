@@ -511,3 +511,10 @@
 - **Files:** 11 (+658/-1)
 - **Duration:** 611ss
 - **Approach:** Added AuthService.login() implementing the full login flow: email normalization, emailVerified check (EmailNotVerifiedException/403), lockedUntil check with expired-lock cleanup (AccountLockedException/423), BCrypt password verification, failedLoginAttempts increment/reset, lockedUntil set after 5th failure, session limit enforcement via countByUserId + findFirstByUserIdOrderByCreatedAtAsc (delete oldest when >= 3), token generation and refresh token hash storage. AuthController POST /login calls login() and sets access_token (Path=/api, Max-Age=900) and refresh_token (Path=/api/auth, Max-Age=604800) as HTTP-only secure SameSite=Strict cookies, returning only the user profile in the response body. Exception handlers for AccountLockedException (423) and EmailNotVerifiedException (403) added to ApiExceptionHandler.
+
+## WO-027: User Story: WO-027 - Implement Role-Based Access Control with PreAuthorize
+- **Status:** completed
+- **Commit:** `5e95387`
+- **Files:** 10 (+458/-8)
+- **Duration:** 538ss
+- **Approach:** Added @EnableMethodSecurity to SecurityConfig and updated the SecurityFilterChain to require authentication for all /api/** endpoints while permitting /api/auth/** and /actuator/** publicly. Added @PreAuthorize('hasAnyRole(ANALYST, KB_ADMIN, MANAGER)') to all AnalysisController methods (analyze, getHistory, getHistoryDetail, getDashboard) and to ErrorController.findAll(). Added @PreAuthorize('hasAnyRole(KB_ADMIN, MANAGER)') to ErrorController create/update/delete methods. Added AccessDeniedException handler to ApiExceptionHandler returning 403 JSON {timestamp, message, status} — this ensures @PreAuthorize failures produce consistent JSON responses instead of falling through to the catch-all 500 handler. Updated 4 existing controller test classes with @WithMockUser to prevent regressions from the new security requirements. Created 30 RBAC tests (17 in AnalysisControllerRbacTest, 13 in ErrorControllerRbacTest) covering all role-endpoint combinations including JSON error body verification.

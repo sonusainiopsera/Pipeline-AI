@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -36,6 +37,18 @@ public class ApiExceptionHandler {
      * to signal that the submitted content exceeds the application's ingest limit.
      * All other validation failures return HTTP 400 with field-level error details.
      */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex,
+                                                                    HttpServletRequest request) {
+        recordErrorMetric("access_denied");
+        log.warn("Access denied: path={}", request.getRequestURI());
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("message", "Access denied");
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
     @ExceptionHandler(AccountLockedException.class)
     public ResponseEntity<Map<String, Object>> handleAccountLocked(AccountLockedException ex,
                                                                     HttpServletRequest request) {

@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -29,12 +30,14 @@ public class AnalysisController {
     private final AnalysisService analysisService;
     private final DashboardService dashboardService;
 
+    @PreAuthorize("hasAnyRole('ANALYST', 'KB_ADMIN', 'MANAGER')")
     @PostMapping("/analyze")
     public AnalysisResponse analyze(@Valid @RequestBody AnalyzeRequest request) {
         log.info("POST /api/analyze received");
         return AnalysisResponse.from(analysisService.analyze(request.getLogText()));
     }
 
+    @PreAuthorize("hasAnyRole('ANALYST', 'KB_ADMIN', 'MANAGER')")
     @GetMapping("/history")
     public Page<HistoryListDTO> getHistory(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -45,6 +48,7 @@ public class AnalysisController {
         return analysisService.getHistory(pageable);
     }
 
+    @PreAuthorize("hasAnyRole('ANALYST', 'KB_ADMIN', 'MANAGER')")
     @GetMapping("/history/{id}")
     public HistoryDetailDTO getHistoryDetail(@PathVariable Long id) {
         log.info("GET /api/history/{} received", id);
@@ -54,6 +58,7 @@ public class AnalysisController {
         return analysisService.historyDetail(id);
     }
 
+    @PreAuthorize("hasAnyRole('ANALYST', 'KB_ADMIN', 'MANAGER')")
     @GetMapping("/dashboard")
     public Map<String, Object> getDashboard() {
         log.info("GET /api/dashboard received");
