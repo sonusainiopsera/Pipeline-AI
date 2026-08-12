@@ -140,3 +140,10 @@
 - **Files:** 2 (+259/-1)
 - **Duration:** 203ss
 - **Approach:** Added server_tokens off and all 7 security headers (CSP, HSTS, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy) with 'always' parameter to the nginx.conf server block. To handle the Nginx add_header scoping rule (child location blocks with their own add_header directive suppress server-block header inheritance), the security headers are repeated in the static-assets location block alongside its Cache-Control header. The / and /api/ location blocks have no add_header so they correctly inherit from the server block. Created scripts/test-nginx-headers.sh that builds the Docker image, starts a temporary container, fetches headers from four URLs (/, /analyze, a static asset, and /does-not-exist-xyz for SPA fallback), then asserts exact header values and absence of Nginx version disclosure.
+
+## WO-005: User Story: WO-005 - Unit Tests for DashboardService Aggregate Calculations
+- **Status:** completed
+- **Commit:** `e4d726c`
+- **Files:** 1 (+172/-0)
+- **Duration:** 95ss
+- **Approach:** Read DashboardService.java to understand the actual return type (Map<String, Object> with keys totalErrors, analyzedLogs, mostCommonIssue, categoryBreakdown) and repository field names (ErrorRepository, AnalyzedLogRepository). Created a Mockito-based test class using @ExtendWith(MockitoExtension.class), @Mock for both repositories, and @InjectMocks for DashboardService. A buildCategoryCounts helper constructs List<Object[]> from alternating (category, count) pairs to match the native-query return type. Wrote 8 test methods covering all 6 required AC scenarios plus two bonus edge cases (tied counts and Long.MAX_VALUE overflow guard).
