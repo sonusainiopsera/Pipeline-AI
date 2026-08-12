@@ -42,26 +42,30 @@ public class PatternMatcher {
 
         List<ScoredMatch> results = new ArrayList<>(entries.size());
         for (ErrorKnowledgeBase entry : entries) {
-            results.add(new ScoredMatch(entry, scoreEntry(normalizedLog, entry)));
+            results.add(scoreEntry(normalizedLog, entry));
         }
         return results;
     }
 
-    private int scoreEntry(String normalizedLog, ErrorKnowledgeBase entry) {
+    private ScoredMatch scoreEntry(String normalizedLog, ErrorKnowledgeBase entry) {
         String errorPattern = entry.getErrorPattern();
         if (errorPattern == null || errorPattern.isBlank()) {
             log.warn("Entry id={} has null/blank errorPattern — scoring as 0", entry.getId());
-            return 0;
+            return new ScoredMatch(entry, 0, 0);
         }
 
         String[] keywords = errorPattern.split(SPLIT_REGEX);
         int matchCount = 0;
+        int totalCount = 0;
         for (String keyword : keywords) {
             String trimmed = keyword.trim();
-            if (!trimmed.isEmpty() && normalizedLog.contains(trimmed.toLowerCase())) {
-                matchCount++;
+            if (!trimmed.isEmpty()) {
+                totalCount++;
+                if (normalizedLog.contains(trimmed.toLowerCase())) {
+                    matchCount++;
+                }
             }
         }
-        return matchCount;
+        return new ScoredMatch(entry, matchCount, totalCount);
     }
 }

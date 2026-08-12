@@ -30,6 +30,7 @@ public class AnalysisService {
 
     public AnalyzedLog analyze(String logText) {
         log.info("Starting analysis, logTextLength={}", logText != null ? logText.length() : 0);
+
         String sanitizedLog;
         try {
             sanitizedLog = logSanitizer.sanitize(logText);
@@ -41,18 +42,17 @@ public class AnalysisService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Analysis failed. Please try again.");
         }
 
-        List<ErrorKnowledgeBase> patterns = errorRepository.findAll();
-        List<ScoredMatch> scored = patternMatcher.match(sanitizedLog, patterns);
+        // 1. Fetch knowledge base entries
+        List<ErrorKnowledgeBase> entries = errorRepository.findAll();
 
-        ErrorKnowledgeBase bestMatch = null;
-        int bestMatchCount = 0;
+        // 2. Score each entry against the sanitized log
+        List<ScoredMatch> scored = patternMatcher.match(sanitizedLog, entries);
 
-        for (ScoredMatch sm : scored) {
-            if (sm.score() > bestMatchCount) {
-                bestMatchCount = sm.score();
-                bestMatch = sm.entry();
-            }
-        }
+        // 3. Select best match (first-wins on ties via strict >)
+        ScoredMatch best = scored.stream()
+                .filter(sm -> sm.score() > 0)
+                .reduce((a, b) -> b.score() > a.score() ? b : a)
+                .orElse(null);
 
         int confidence;
         String category;
@@ -61,13 +61,13 @@ public class AnalysisService {
         String severity;
         String customerUpdate;
 
-        if (bestMatch != null && bestMatchCount > 0) {
-            int totalKeywords = bestMatch.getErrorPattern().split(",").length;
-            confidence = scoringEngine.calculateConfidence(bestMatchCount, totalKeywords);
-            category = bestMatch.getCategory();
-            rootCause = bestMatch.getRootCause();
-            suggestedFix = bestMatch.getSolution();
-            severity = bestMatch.getSeverity();
+        if (best != null) {
+            // 4-5. Delegate confidence and response to extracted beans
+            confidence = scoringEngine.calculateConfidence(best.score(), best.totalPatterns());
+            category = best.entry().getCategory();
+            rootCause = best.entry().getRootCause();
+            suggestedFix = best.entry().getSolution();
+            severity = best.entry().getSeverity();
             customerUpdate = responseTemplater.generate(category, rootCause, suggestedFix);
         } else {
             confidence = scoringEngine.calculateConfidence(0, 0);
@@ -78,15 +78,16 @@ public class AnalysisService {
             customerUpdate = responseTemplater.generateUnclassified();
         }
 
+        // 6. Build entity and persist
         AnalyzedLog result = AnalyzedLog.builder()
-            .logText(sanitizedLog)
-            .category(category)
-            .rootCause(rootCause)
-            .suggestedFix(suggestedFix)
-            .customerUpdate(customerUpdate)
-            .severity(severity)
-            .confidence(confidence)
-            .build();
+                .logText(sanitizedLog)
+                .category(category)
+                .rootCause(rootCause)
+                .suggestedFix(suggestedFix)
+                .customerUpdate(customerUpdate)
+                .severity(severity)
+                .confidence(confidence)
+                .build();
 
         log.info("Analysis complete, category={}, confidence={}", category, confidence);
         return analyzedLogRepository.save(result);
