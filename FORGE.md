@@ -385,3 +385,10 @@
 - **Files:** 5 (+200/-3)
 - **Duration:** 235ss
 - **Approach:** Created Role.java enum in the model package (consistent with all other entities in this project per WO-015 prior-changes) with values ANALYST, KB_ADMIN, MANAGER. Updated User.java's role field from String to Role enum with @Enumerated(EnumType.STRING), @Column(length=20, nullable=false), and @Builder.Default(Role.ANALYST). Added explicit length=255 to email and passwordHash columns as specified. Extended UserRepository with existsByEmail(String) returning boolean alongside the existing findByEmail method. Created UserTestFactory in a new testutil package (matching the WO-specified path) with six builder-pattern factory methods covering all role values and common test scenarios. Created UserRepositoryTest with @DataJpaTest @ActiveProfiles('test') and seven tests covering all acceptance criteria scenarios.
+
+## WO-021: User Story: WO-021 - Implement CustomUserDetailsService for Authentication
+- **Status:** completed
+- **Commit:** `02de541`
+- **Files:** 2 (+260/-0)
+- **Duration:** 204ss
+- **Approach:** Created a new security package containing CustomUserDetailsService (@Service @RequiredArgsConstructor) implementing Spring Security's UserDetailsService. loadUserByUsername() normalises the input email to lowercase (edge-case requirement), queries UserRepository.findByEmail(), throws UsernameNotFoundException with a message containing the email when absent, then maps the User entity to Spring Security UserDetails using the User.builder() fluent API: username=entity.getEmail(), password=entity.getPasswordHash(), authority=ROLE_+role.name() (satisfies Spring Security ROLE_ prefix convention), accountLocked=(lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now())), disabled=!emailVerified. No SecurityConfig changes were required — Spring Boot 3.x auto-configuration detects the single UserDetailsService bean and wires it into DaoAuthenticationProvider automatically, replacing the default InMemoryUserDetailsManager. Created CustomUserDetailsServiceTest with 11 Mockito (@ExtendWith(MockitoExtension.class)) unit tests.
