@@ -469,3 +469,10 @@
 - **Files:** 8 (+506/-1)
 - **Duration:** 726ss
 - **Approach:** Created JwtAuthenticationFilter in the security package extending OncePerRequestFilter with constructor injection of JwtTokenProvider and CustomUserDetailsService (both already present from WO-020/WO-021). The filter uses two private extraction methods: extractTokenFromCookie() reads the 'access_token' cookie, extractTokenFromHeader() strips the 'Bearer ' prefix from the Authorization header. Cookie takes priority: the header is only tried when the cookie yields null. shouldNotFilter() skips /api/auth/** and /actuator/** paths. doFilterInternal() wraps all processing in a try-catch — on success, a UsernamePasswordAuthenticationToken (with WebAuthenticationDetailsSource details) is set in SecurityContextHolder; on any exception, the context is cleared and the filter chain continues without authentication. SecurityConfig.securityFilterChain() now accepts JwtAuthenticationFilter as a method parameter and registers it before UsernamePasswordAuthenticationFilter via addFilterBefore(); the existing permitAll() posture is preserved for WOREF-026. Since @WebMvcTest slices include Filter beans, the four existing controller @WebMvcTest tests were updated to add @MockBean JwtTokenProvider and @MockBean CustomUserDetailsService to satisfy the filter's constructor dependencies in the slice context — their mocked default return values (false for validateToken) keep all existing test assertions passing.
+
+## WO-030: User Story: WO-030 - Implement Email Verification Endpoint
+- **Status:** completed
+- **Commit:** `e829259`
+- **Files:** 10 (+445/-0)
+- **Duration:** 459ss
+- **Approach:** Created EmailService interface and ConsoleEmailService (@Profile('dev')) for token delivery. AuthService implements register (UUID token + 24h expiry + BCrypt password hash), verifyEmail (validates token, checks expiry, activates account), and resendVerification (email-enumeration-safe no-op for unknown/verified). AuthController exposes GET /api/auth/verify and POST /api/auth/verify/resend. Added PasswordEncoder @Bean to SecurityConfig and findByVerificationToken to UserRepository.
