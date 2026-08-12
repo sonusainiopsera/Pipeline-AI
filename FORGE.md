@@ -371,3 +371,10 @@
 - **Files:** 7 (+840/-1)
 - **Duration:** 353ss
 - **Approach:** Created three Grafana 11.x dashboard JSON files (schemaVersion 39) and one unified alerting YAML provisioned under the existing ./grafana/provisioning volume mount that already covers all subdirectories. Added explicit uid fields (prometheus, loki) to datasources.yml so alert rules and dashboard panels can reference data sources deterministically without relying on Grafana's auto-generated UUIDs. Updated dashboard.yml to set disableDeletion: true (was false). Created grafana/provisioning/alerting/alerts.yml with the three required alert rules using Grafana unified alerting classic_conditions format, plus a default email contact point and routing policy. Added GF_UNIFIED_ALERTING_ENABLED=true and GF_ALERTING_ENABLED=false to the grafana service in docker-compose.yml to activate Grafana 11 unified alerting. All JSON files pass python3 -m json.tool validation.
+
+## WO-072: User Story: WO-072 - Upgrade Java 17 to Java 21 LTS
+- **Status:** completed
+- **Commit:** `f4ae35d`
+- **Files:** 2 (+3/-3)
+- **Duration:** 259ss
+- **Approach:** Changed <java.version>17</java.version> to <java.version>21</java.version> in pom.xml. Updated both stages of the multi-stage Dockerfile: build stage from eclipse-temurin:17-jdk-alpine to eclipse-temurin:21-jdk-alpine and runtime stage from eclipse-temurin:17-jre-alpine to eclipse-temurin:21-jre-alpine. No Lombok version pin required — Spring Boot 3.3.5 BOM manages Lombok 1.18.32 which is Java 21 compatible (>= 1.18.28 required). No source code changes made per the WO constraint. docker-compose.yml required no changes as it contains no Java version references, only a build context pointer to ./backend.

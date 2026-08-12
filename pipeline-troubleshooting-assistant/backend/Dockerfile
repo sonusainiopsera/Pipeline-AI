@@ -1,5 +1,5 @@
 # ── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM eclipse-temurin:17-jdk-alpine AS builder
+FROM eclipse-temurin:21-jdk-alpine AS builder
 
 # Maven is not bundled in eclipse-temurin; install from Alpine package index
 RUN apk add --no-cache maven
@@ -16,7 +16,7 @@ RUN mvn clean package -DskipTests -B
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
 # Use JRE-only image — JDK, Maven, and source code are discarded
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
