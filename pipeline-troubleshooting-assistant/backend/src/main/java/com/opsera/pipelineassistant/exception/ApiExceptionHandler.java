@@ -1,5 +1,7 @@
 package com.opsera.pipelineassistant.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -14,6 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class ApiExceptionHandler {
 
     private static final String LOG_TEXT_SIZE_MESSAGE =
@@ -27,7 +30,8 @@ public class ApiExceptionHandler {
      * All other validation failures return HTTP 400 with field-level error details.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex,
+                                                                 HttpServletRequest request) {
         List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors();
 
         boolean isLogTextSizeViolation = fieldErrors.stream()
@@ -35,12 +39,18 @@ public class ApiExceptionHandler {
                         && LOG_TEXT_SIZE_MESSAGE.equals(fe.getDefaultMessage()));
 
         if (isLogTextSizeViolation) {
+            log.warn("Validation failed: exceptionClass={}, status={}, path={}",
+                    ex.getClass().getSimpleName(), HttpStatus.PAYLOAD_TOO_LARGE.value(), request.getRequestURI());
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("timestamp", LocalDateTime.now().toString());
             body.put("message", LOG_TEXT_SIZE_MESSAGE);
             body.put("status", HttpStatus.PAYLOAD_TOO_LARGE.value());
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
         }
+
+        log.warn("Validation failed: exceptionClass={}, status={}, path={}, fieldErrorCount={}",
+                ex.getClass().getSimpleName(), HttpStatus.BAD_REQUEST.value(),
+                request.getRequestURI(), fieldErrors.size());
 
         List<Map<String, String>> errors = fieldErrors.stream()
                 .map(fe -> {

@@ -6,6 +6,7 @@ import com.opsera.pipelineassistant.service.AnalysisService;
 import com.opsera.pipelineassistant.service.DashboardService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Slf4j
 public class AnalysisController {
 
     private final AnalysisService analysisService;
@@ -21,16 +23,19 @@ public class AnalysisController {
 
     @PostMapping("/analyze")
     public AnalyzedLog analyze(@Valid @RequestBody AnalyzeRequest request) {
+        log.info("POST /api/analyze received");
         return analysisService.analyze(request.getLogText());
     }
 
     @GetMapping("/history")
     public List<AnalyzedLog> getHistory() {
+        log.info("GET /api/history received");
         return analysisService.getHistory();
     }
 
     @GetMapping("/dashboard")
     public Map<String, Object> getDashboard() {
+        log.info("GET /api/dashboard received");
         return dashboardService.getStats();
     }
 }

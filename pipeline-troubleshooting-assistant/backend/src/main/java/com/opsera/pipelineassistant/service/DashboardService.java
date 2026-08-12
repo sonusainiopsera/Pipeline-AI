@@ -3,6 +3,7 @@ package com.opsera.pipelineassistant.service;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
 import com.opsera.pipelineassistant.repository.ErrorRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -11,6 +12,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DashboardService {
 
     private final ErrorRepository errorRepository;
@@ -41,6 +43,7 @@ public class DashboardService {
         stats.put("mostCommonIssue", mostCommonIssue);
         stats.put("categoryBreakdown", breakdown);
 
+        log.info("Dashboard stats retrieved, analyzedLogs={}, mostCommonIssue={}", analyzedLogs, mostCommonIssue);
         return stats;
     }
 }

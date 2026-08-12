@@ -29,6 +29,7 @@ public class AnalysisService {
     private final ResponseTemplater responseTemplater;
 
     public AnalyzedLog analyze(String logText) {
+        log.info("Starting analysis, logTextLength={}", logText != null ? logText.length() : 0);
         String sanitizedLog;
         try {
             sanitizedLog = logSanitizer.sanitize(logText);
@@ -87,6 +88,7 @@ public class AnalysisService {
             .confidence(confidence)
             .build();
 
+        log.info("Analysis complete, category={}, confidence={}", category, confidence);
         return analyzedLogRepository.save(result);
     }
 
