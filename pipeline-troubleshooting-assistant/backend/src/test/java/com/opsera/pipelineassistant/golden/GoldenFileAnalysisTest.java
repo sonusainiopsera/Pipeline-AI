@@ -1,6 +1,8 @@
 package com.opsera.pipelineassistant.golden;
 
 import com.opsera.pipelineassistant.analysis.PatternMatcher;
+import com.opsera.pipelineassistant.analysis.ScoringEngine;
+import com.opsera.pipelineassistant.analysis.ScoringProperties;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
@@ -52,6 +54,10 @@ class GoldenFileAnalysisTest {
     // Real PatternMatcher — no external dependencies, exercises actual matching logic
     @Spy
     private PatternMatcher patternMatcher;
+
+    // Real ScoringEngine with default config — ensures golden confidence values remain stable
+    @Spy
+    private ScoringEngine scoringEngine = new ScoringEngine(new ScoringProperties());
 
     @InjectMocks
     private AnalysisService analysisService;

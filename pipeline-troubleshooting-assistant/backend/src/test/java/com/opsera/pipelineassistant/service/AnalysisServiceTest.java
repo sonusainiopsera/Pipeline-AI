@@ -1,6 +1,8 @@
 package com.opsera.pipelineassistant.service;
 
 import com.opsera.pipelineassistant.analysis.PatternMatcher;
+import com.opsera.pipelineassistant.analysis.ScoringEngine;
+import com.opsera.pipelineassistant.analysis.ScoringProperties;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
@@ -38,6 +40,11 @@ class AnalysisServiceTest {
     // PatternMatcher has no dependencies, so @Spy creates a real instance.
     @Spy
     private PatternMatcher patternMatcher;
+
+    // Use a real ScoringEngine with default configuration so confidence values
+    // match the previously hardcoded constants (55, 43, 98).
+    @Spy
+    private ScoringEngine scoringEngine = new ScoringEngine(new ScoringProperties());
 
     @InjectMocks
     private AnalysisService analysisService;

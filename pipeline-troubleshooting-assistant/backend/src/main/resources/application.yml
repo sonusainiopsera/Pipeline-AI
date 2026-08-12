@@ -30,6 +30,13 @@ app:
     # Resolved from environment variable; default is LOCAL-DEVELOPMENT-ONLY
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
+analysis:
+  scoring:
+    base-confidence: 55
+    scaling-factor: 43
+    max-confidence: 98
+    unclassified-confidence: 20
+
 management:
   endpoints:
     web:

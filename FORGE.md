@@ -196,3 +196,10 @@
 - **Files:** 3 (+284/-1)
 - **Duration:** 377ss
 - **Approach:** Added two @DataJpaTest repository test classes. Updated application-test.yml to add MODE=PostgreSQL to the H2 JDBC URL for PostgreSQL syntax compatibility in @SpringBootTest tests. AnalyzedLogRepositoryTest uses TestEntityManager to persist test data and JPQL UPDATE queries to set explicit createdAt timestamps after initial persist (necessary because @CreationTimestamp sets the field at INSERT time, which in a single test transaction would give all entities the same timestamp). ErrorKnowledgeBaseRepositoryTest verifies basic JpaRepository CRUD operations, field persistence (including the @CreationTimestamp createdAt), and count behavior. Both test classes rely on @DataJpaTest's default @Transactional rollback for test isolation — no manual cleanup needed. The categoryCounts query is JPQL (not native SQL as the WO description suggested), verified by reading the actual AnalyzedLogRepository source: 'SELECT a.category, COUNT(a) FROM AnalyzedLog a GROUP BY a.category'.
+
+## WO-044: User Story: WO-044 - Extract ScoringEngine with Externalized Configuration
+- **Status:** completed
+- **Commit:** `72de0c1`
+- **Files:** 8 (+310/-2)
+- **Duration:** 500ss
+- **Approach:** Extracted the hardcoded confidence scoring formula from AnalysisService.analyze() into a dedicated ScoringEngine Spring @Service bean. Created a ScoringProperties @ConfigurationProperties class binding the analysis.scoring prefix with fields baseConfidence (55), scalingFactor (43), maxConfidence (98), and unclassifiedConfidence (20). ScoringEngine validates its properties on construction (fail-fast) and delegates calculateConfidence(matchCount, totalPatterns) to the externalized formula. AnalysisService now injects ScoringEngine via @RequiredArgsConstructor and delegates both the matched and unclassified confidence paths to it. Existing tests were updated to use @Spy with an initialized ScoringEngine instance to provide real scoring behavior under Mockito @InjectMocks.
