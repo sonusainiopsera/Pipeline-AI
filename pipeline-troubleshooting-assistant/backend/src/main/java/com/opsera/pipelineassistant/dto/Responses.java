@@ -92,7 +92,8 @@ public final class Responses {
             String severity,
             Integer confidence,
             LocalDateTime createdAt,
-            List<String> matchedPatterns
+            List<String> matchedPatterns,
+            boolean sanitized
     ) {
         public static AnalysisResponse from(AnalyzedLog log) {
             return new AnalysisResponse(
@@ -104,7 +105,8 @@ public final class Responses {
                     log.getSeverity(),
                     log.getConfidence(),
                     log.getCreatedAt(),
-                    log.getMatchedPatterns() != null ? log.getMatchedPatterns() : List.of()
+                    log.getMatchedPatterns() != null ? log.getMatchedPatterns() : List.of(),
+                    true
             );
         }
     }

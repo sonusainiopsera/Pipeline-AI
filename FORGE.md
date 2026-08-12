@@ -581,3 +581,10 @@
 - **Files:** 2 (+468/-0)
 - **Duration:** 650ss
 - **Approach:** Testcontainers dependencies (postgresql + junit-jupiter) were already present in pom.xml. Created application-auth-it.yml with 5-second access token / 60-second refresh token expiry (for the expired-token test) and scheduler disabled. Created AuthIntegrationTest using @SpringBootTest(RANDOM_PORT) + @Testcontainers with a static PostgreSQLContainer and @DynamicPropertySource for datasource properties. @MockBean EmailService is no-op so verification tokens are read directly from UserRepository after registration. Cookie handling is done manually by parsing Set-Cookie response headers and injecting Cookie request headers via HttpEntity. MFA enrollment test extracts the TOTP secret from the qrCodeUri and uses DefaultCodeGenerator to generate a valid code. KB_ADMIN RBAC is tested by elevating a registered user's role via UserRepository before logging in.
+
+## WO-076: User Story: WO-076 - Implement Log Sanitization Before Analysis Persistence
+- **Status:** completed
+- **Commit:** `2e79baa`
+- **Files:** 3 (+135/-2)
+- **Duration:** 516ss
+- **Approach:** LogSanitizer.java, AnalysisService.java (sanitize() call), LogSanitizerTest.java, and fixture files under src/test/resources/sanitization/ were already present from a prior WO. The remaining work was: (1) add boolean sanitized field to AnalysisResponse in Responses.java with from() hardcoded to true since sanitization is unconditionally applied; (2) add a @WebMvcTest test verifying sanitized=true in the POST /api/analyze JSON response; (3) create AnalysisServiceSanitizationTest.java with four Mockito argument-captor tests confirming sanitize() is called before save() and that the persisted logText equals the sanitizer output.

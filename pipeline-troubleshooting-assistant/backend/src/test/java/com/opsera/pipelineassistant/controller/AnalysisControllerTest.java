@@ -163,6 +163,27 @@ class AnalysisControllerTest {
     }
 
     @Test
+    void shouldIncludeSanitizedTrueInAnalyzeResponse() throws Exception {
+        AnalyzedLog response = AnalyzedLog.builder()
+                .id(5L)
+                .category("Permissions")
+                .rootCause("Auth failure")
+                .suggestedFix("Check credentials")
+                .customerUpdate("We identified an auth issue.")
+                .severity("HIGH")
+                .confidence(90)
+                .build();
+
+        when(analysisService.analyze(anyString())).thenReturn(response);
+
+        mockMvc.perform(post("/api/analyze")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"logText\":\"Bearer eyJtokenFake auth failed at 10.0.0.1 user@test.com\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sanitized", is(true)));
+    }
+
+    @Test
     void shouldReturn415WhenContentTypeIsNotJson() throws Exception {
         mockMvc.perform(post("/api/analyze")
                         .contentType(MediaType.TEXT_PLAIN)
