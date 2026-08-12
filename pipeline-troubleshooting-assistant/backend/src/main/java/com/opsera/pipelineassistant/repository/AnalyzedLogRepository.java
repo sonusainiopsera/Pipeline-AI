@@ -12,11 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface AnalyzedLogRepository extends JpaRepository<AnalyzedLog, Long> {
 
     List<AnalyzedLog> findTop50ByOrderByCreatedAtDesc();
+
+    List<AnalyzedLog> findByUser_IdOrderByCreatedAtDesc(UUID userId);
 
     Page<AnalyzedLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
 

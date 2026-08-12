@@ -9,7 +9,9 @@ import com.opsera.pipelineassistant.dto.Responses.HistoryDetailDTO;
 import com.opsera.pipelineassistant.dto.Responses.HistoryListDTO;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
+import com.opsera.pipelineassistant.model.User;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
+import com.opsera.pipelineassistant.repository.UserRepository;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -18,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -33,6 +37,7 @@ public class AnalysisService {
 
     private final KnowledgeBaseService knowledgeBaseService;
     private final AnalyzedLogRepository analyzedLogRepository;
+    private final UserRepository userRepository;
     private final LogSanitizer logSanitizer;
     private final PatternMatcher patternMatcher;
     private final ScoringEngine scoringEngine;
@@ -107,6 +112,7 @@ public class AnalysisService {
                     .customerUpdate(customerUpdate)
                     .severity(severity)
                     .confidence(confidence)
+                    .user(extractCurrentUser())
                     .build();
             result.setMatchedPatterns(matchedPatterns);
 
@@ -142,6 +148,20 @@ public class AnalysisService {
     public Page<HistoryListDTO> getHistory(Pageable pageable) {
         return analyzedLogRepository.findAllByOrderByCreatedAtDesc(pageable)
                 .map(HistoryListDTO::from);
+    }
+
+    User extractCurrentUser() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                return null;
+            }
+            String email = auth.getName();
+            return userRepository.findByEmail(email).orElse(null);
+        } catch (Exception e) {
+            log.warn("Failed to extract current user from SecurityContext: {}", e.getMessage());
+            return null;
+        }
     }
 
     // @PreAuthorize("hasRole('ANALYST')") — placeholder for Spring Security integration (Security epic)

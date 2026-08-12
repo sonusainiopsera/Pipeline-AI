@@ -553,3 +553,10 @@
 - **Files:** 11 (+726/-9)
 - **Duration:** 889ss
 - **Approach:** Implemented a two-step MFA login flow. AuthService.login() branches on mfaEnabled: MFA-enabled users receive a 5-minute JWT challenge token (set as an mfa_challenge HttpOnly cookie, stored as SHA-256 hash on User.mfaChallengeTokenHash for single-use enforcement) instead of access/refresh tokens. Two new endpoints complete login: POST /mfa/challenge validates the cookie + TOTP code, and POST /mfa/recover validates the cookie + a BCrypt-matched recovery code. Both clear the challenge token hash before verifying to enforce single-use regardless of outcome. JwtTokenProvider gained generateMfaChallengeToken/validateMfaChallengeToken/extractMfaChallengeEmail methods using a type=mfa-challenge claim to distinguish challenge tokens from access tokens. AuthService gained AesEncryptionUtil and ObjectMapper dependencies to decrypt the TOTP secret and parse/update the JSON recovery codes list. Non-MFA users receive full access+refresh tokens with mfaRequired=false in LoginResponse.
+
+## WO-034: User Story: WO-034 - Add User ID to Analyzed Logs
+- **Status:** completed
+- **Commit:** `4a517d9`
+- **Files:** 3 (+199/-0)
+- **Duration:** 293ss
+- **Approach:** The AnalyzedLog entity already had a nullable @ManyToOne User user field mapped to user_id FK (added by V2 migration), and the DB column/index already existed. The remaining work was: (1) adding UserRepository to AnalysisService, (2) adding extractCurrentUser() to get the email from SecurityContextHolder, look up the User entity, and return null gracefully for anonymous/unauthenticated requests, (3) wiring .user(extractCurrentUser()) into the AnalyzedLog.builder() in analyze(), and (4) adding findByUser_IdOrderByCreatedAtDesc(UUID userId) to AnalyzedLogRepository using Spring Data JPA nested property syntax. No new DB migration was needed since the schema was already up to date.
