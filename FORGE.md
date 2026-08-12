@@ -21,3 +21,10 @@
 - **Files:** 1 (+269/-0)
 - **Duration:** 200ss
 - **Approach:** Created a pure Mockito unit test class for AnalysisService with 14 test methods. Used @ExtendWith(MockitoExtension.class) with @Mock on ErrorRepository and AnalyzedLogRepository and @InjectMocks on AnalysisService. A buildKnowledgeBaseEntry() helper constructs ErrorKnowledgeBase entities for each test. Each test mocks errorRepository.findAll() to return a controlled list and mocks analyzedLogRepository.save() to pass-through the argument (so returned fields can be asserted). Tests cover all branches of analyze(): matching path, unclassified fallback, confidence formula arithmetic including integer division truncation, best-match tie-breaking, case-insensitivity, whitespace trimming, customer update template content, and ArgumentCaptor verification of the persisted entity.
+
+## WO-004: User Story: WO-004 - Unit Tests for KnowledgeBaseService CRUD Operations
+- **Status:** completed
+- **Commit:** `db61403`
+- **Files:** 2 (+191/-2)
+- **Duration:** 258ss
+- **Approach:** The scaffolded KnowledgeBaseService lacked a findById method and used RuntimeException instead of ResponseStatusException — inconsistent with the WO's described Current Behavior and the acceptance criteria requiring NOT_FOUND status testing. Updated the service to add findById(Long id) throwing ResponseStatusException(NOT_FOUND), then refactored update() and delete() to delegate to findById for consistent 404 handling. Created KnowledgeBaseServiceTest with 9 pure Mockito unit tests covering all CRUD paths, both happy paths and not-found error paths, using ArgumentCaptor to verify field mapping on create and update.
