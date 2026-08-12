@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -68,6 +69,7 @@ public class AnalysisService {
             String suggestedFix;
             String severity;
             String customerUpdate;
+            List<String> matchedPatterns;
 
             if (best != null) {
                 // 4-5. Delegate confidence and response to extracted beans
@@ -77,6 +79,7 @@ public class AnalysisService {
                 suggestedFix = best.entry().getSolution();
                 severity = best.entry().getSeverity();
                 customerUpdate = responseTemplater.generate(category, rootCause, suggestedFix);
+                matchedPatterns = best.matchedPatterns();
             } else {
                 confidence = scoringEngine.calculateConfidence(0, 0);
                 category = "Unclassified";
@@ -84,6 +87,7 @@ public class AnalysisService {
                 suggestedFix = "Please review the log manually or contact support.";
                 severity = "MEDIUM";
                 customerUpdate = responseTemplater.generateUnclassified();
+                matchedPatterns = Collections.emptyList();
             }
 
             // 6. Build entity and persist
@@ -96,6 +100,7 @@ public class AnalysisService {
                     .severity(severity)
                     .confidence(confidence)
                     .build();
+            result.setMatchedPatterns(matchedPatterns);
 
             // 7. Record analysis.requests counter with detected category tag
             try {

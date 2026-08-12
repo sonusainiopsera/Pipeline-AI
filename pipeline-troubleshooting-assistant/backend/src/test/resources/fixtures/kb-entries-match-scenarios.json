@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "errorPattern": "OutOfMemoryError,heap space,java.lang",
+    "category": "Memory",
+    "rootCause": "Java heap space exhausted during pipeline execution",
+    "solution": "Increase JVM heap size using -Xmx flag or optimize memory usage in the build",
+    "severity": "HIGH"
+  },
+  {
+    "id": 2,
+    "errorPattern": "rate limit exceeded,http 429,too many requests",
+    "category": "RateLimit",
+    "rootCause": "API rate limit exceeded by the pipeline tool",
+    "solution": "Add retry logic with exponential backoff or request a rate limit increase",
+    "severity": "MEDIUM"
+  },
+  {
+    "id": 3,
+    "errorPattern": "connection refused,timeout,unable to connect",
+    "category": "Network",
+    "rootCause": "Network connectivity failure between pipeline components",
+    "solution": "Verify network configuration and firewall rules between services",
+    "severity": "HIGH"
+  }
+]

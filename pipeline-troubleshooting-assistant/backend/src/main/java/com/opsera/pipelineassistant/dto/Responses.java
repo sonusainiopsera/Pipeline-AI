@@ -3,6 +3,7 @@ package com.opsera.pipelineassistant.dto;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public final class Responses {
 
@@ -31,6 +32,38 @@ public final class Responses {
                     log.getSeverity(),
                     log.getConfidence(),
                     log.getCreatedAt()
+            );
+        }
+    }
+
+    /**
+     * Response DTO for the POST /api/analyze endpoint.
+     * Includes matchedPatterns — the keyword strings from the best-matching KB entry
+     * that were found in the submitted log text. This field is computed on-the-fly
+     * and is not persisted to the database.
+     */
+    public record AnalysisResponse(
+            Long id,
+            String category,
+            String rootCause,
+            String suggestedFix,
+            String customerUpdate,
+            String severity,
+            Integer confidence,
+            LocalDateTime createdAt,
+            List<String> matchedPatterns
+    ) {
+        public static AnalysisResponse from(AnalyzedLog log) {
+            return new AnalysisResponse(
+                    log.getId(),
+                    log.getCategory(),
+                    log.getRootCause(),
+                    log.getSuggestedFix(),
+                    log.getCustomerUpdate(),
+                    log.getSeverity(),
+                    log.getConfidence(),
+                    log.getCreatedAt(),
+                    log.getMatchedPatterns() != null ? log.getMatchedPatterns() : List.of()
             );
         }
     }

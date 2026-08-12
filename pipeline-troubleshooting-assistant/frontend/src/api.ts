@@ -1,6 +1,6 @@
 export interface AnalyzedLog {
   id: number;
-  logText: string;
+  logText?: string;
   category: string;
   rootCause: string;
   suggestedFix: string;
@@ -8,6 +8,7 @@ export interface AnalyzedLog {
   severity: string;
   confidence: number;
   createdAt: string;
+  matchedPatterns?: string[];
 }
 
 export interface KnowledgeBaseEntry {

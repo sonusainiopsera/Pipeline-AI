@@ -1,6 +1,7 @@
 package com.opsera.pipelineassistant.controller;
 
 import com.opsera.pipelineassistant.dto.AnalyzeRequest;
+import com.opsera.pipelineassistant.dto.Responses.AnalysisResponse;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.service.AnalysisService;
 import com.opsera.pipelineassistant.service.DashboardService;
@@ -22,9 +23,9 @@ public class AnalysisController {
     private final DashboardService dashboardService;
 
     @PostMapping("/analyze")
-    public AnalyzedLog analyze(@Valid @RequestBody AnalyzeRequest request) {
+    public AnalysisResponse analyze(@Valid @RequestBody AnalyzeRequest request) {
         log.info("POST /api/analyze received");
-        return analysisService.analyze(request.getLogText());
+        return AnalysisResponse.from(analysisService.analyze(request.getLogText()));
     }
 
     @GetMapping("/history")

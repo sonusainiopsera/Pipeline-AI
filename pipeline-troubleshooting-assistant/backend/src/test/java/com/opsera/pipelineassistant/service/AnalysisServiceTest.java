@@ -333,7 +333,54 @@ class AnalysisServiceTest {
         assertThat(captor.getValue().getLogText()).isNotEqualTo(rawLog);
     }
 
-    // ── 17. Timer records latency for each analysis call ─────────────────────
+    // ── 17. matchedPatterns populated for a classified result ────────────────
+    @Test
+    void shouldReturnMatchedPatternsForBestEntry() {
+        ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
+                "OutOfMemoryError,heap space,java.lang",
+                "Memory", "Heap exhausted", "Increase -Xmx", "HIGH");
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
+        when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AnalyzedLog result = analysisService.analyze("outofmemoryerror heap space detected");
+
+        assertThat(result.getMatchedPatterns())
+                .containsExactlyInAnyOrder("OutOfMemoryError", "heap space")
+                .doesNotContain("java.lang");
+    }
+
+    // ── 18. matchedPatterns is empty for unclassified ────────────────────────
+    @Test
+    void shouldReturnEmptyMatchedPatternsForUnclassifiedResult() {
+        when(knowledgeBaseService.getAllEntries()).thenReturn(Collections.emptyList());
+        when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AnalyzedLog result = analysisService.analyze("no matching patterns here");
+
+        assertThat(result.getMatchedPatterns()).isEmpty();
+    }
+
+    // ── 19. matchedPatterns contains only the best entry's matches ─────────────
+    @Test
+    void shouldReturnOnlyBestEntryMatchedPatterns() {
+        ErrorKnowledgeBase lowScore = buildKnowledgeBaseEntry(
+                "alpha,beta,gamma", "Category-Low", "Low cause", "Low fix", "LOW");
+        ErrorKnowledgeBase highScore = buildKnowledgeBaseEntry(
+                "delta,epsilon,zeta", "Category-High", "High cause", "High fix", "HIGH");
+
+        // Log matches 1 keyword from lowScore, all 3 from highScore
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(lowScore, highScore));
+        when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AnalyzedLog result = analysisService.analyze("alpha delta epsilon zeta present");
+
+        assertThat(result.getCategory()).isEqualTo("Category-High");
+        assertThat(result.getMatchedPatterns())
+                .containsExactlyInAnyOrder("delta", "epsilon", "zeta")
+                .doesNotContain("alpha");
+    }
+
+    // ── 20. Timer records latency for each analysis call ─────────────────────
     @Test
     void shouldRecordAnalysisDurationTimerForEachCall() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
@@ -350,7 +397,7 @@ class AnalysisServiceTest {
         assertThat(registry.timer("analysis.duration").count()).isEqualTo(2);
     }
 
-    // ── 18. analysis.requests counter incremented with category tag ────────────
+    // ── 21. analysis.requests counter incremented with category tag ────────────
     @Test
     void shouldIncrementRequestsCounterWithDetectedCategoryTag() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
@@ -375,7 +422,7 @@ class AnalysisServiceTest {
         assertThat(registry.counter("analysis.requests", "category", "Memory").count()).isEqualTo(1.0);
     }
 
-    // ── 19. Unclassified analysis still increments counter with tag 'Unclassified'
+    // ── 22. Unclassified analysis still increments counter with tag 'Unclassified'
     @Test
     void shouldIncrementRequestsCounterWithUnclassifiedTagWhenNoMatch() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();

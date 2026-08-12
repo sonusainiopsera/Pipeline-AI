@@ -1,0 +1,5 @@
+Build pipeline failed at deployment stage.
+Connection timeout occurred while connecting to Kubernetes API server.
+Retrying deployment (attempt 2 of 3).
+Unable to connect to target endpoint after 30 seconds.
+Deploy step aborted: cluster unreachable.

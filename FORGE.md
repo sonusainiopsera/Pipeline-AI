@@ -322,3 +322,10 @@
 - **Files:** 1 (+16/-1)
 - **Duration:** 69ss
 - **Approach:** Modified docker-compose.yml to add health checks to backend and frontend services, add start_period to the existing db health check, add restart: unless-stopped to db, and upgrade frontend depends_on from short-form list syntax to long-form condition: service_healthy. The backend was already using condition: service_healthy for db. This enforces a three-stage ordered startup: db healthy → backend starts and becomes healthy → frontend starts.
+
+## WO-075: User Story: WO-075 - Harden Pipeline Log Analysis with Matched Patterns
+- **Status:** completed
+- **Commit:** `7c8f589`
+- **Files:** 12 (+190/-12)
+- **Duration:** 984ss
+- **Approach:** Added matchedPatterns to the analysis pipeline end-to-end without schema changes: (1) ScoredMatch record gained a 4th field List<String> matchedPatterns; (2) PatternMatcher.scoreEntry() now collects matched keyword strings into matchedKeywords list while counting, returning them alongside the score; (3) AnalyzedLog entity gained a @Transient List<String> matchedPatterns field (never persisted); (4) AnalysisResponse record added to Responses.java with all prior fields plus matchedPatterns, with a from(AnalyzedLog) factory; (5) AnalysisService.analyze() extracts best.matchedPatterns() for classified results or empty list for unclassified and sets it on the entity; (6) AnalysisController.analyze() wraps the entity in AnalysisResponse.from() before returning. @Size and 413 handling were already in place from WO-046. Frontend api.ts updated to add optional matchedPatterns?: string[] to the AnalyzedLog interface.

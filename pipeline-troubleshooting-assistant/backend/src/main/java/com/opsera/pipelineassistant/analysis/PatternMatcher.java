@@ -51,21 +51,23 @@ public class PatternMatcher {
         String errorPattern = entry.getErrorPattern();
         if (errorPattern == null || errorPattern.isBlank()) {
             log.warn("Entry id={} has null/blank errorPattern — scoring as 0", entry.getId());
-            return new ScoredMatch(entry, 0, 0);
+            return new ScoredMatch(entry, 0, 0, List.of());
         }
 
         String[] keywords = errorPattern.split(SPLIT_REGEX);
         int matchCount = 0;
         int totalCount = 0;
+        List<String> matchedKeywords = new ArrayList<>();
         for (String keyword : keywords) {
             String trimmed = keyword.trim();
             if (!trimmed.isEmpty()) {
                 totalCount++;
                 if (normalizedLog.contains(trimmed.toLowerCase())) {
                     matchCount++;
+                    matchedKeywords.add(trimmed);
                 }
             }
         }
-        return new ScoredMatch(entry, matchCount, totalCount);
+        return new ScoredMatch(entry, matchCount, totalCount, List.copyOf(matchedKeywords));
     }
 }

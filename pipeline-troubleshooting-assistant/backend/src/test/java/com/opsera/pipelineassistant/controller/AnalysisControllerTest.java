@@ -73,6 +73,54 @@ class AnalysisControllerTest {
     }
 
     @Test
+    void shouldIncludeMatchedPatternsInAnalyzeResponse() throws Exception {
+        AnalyzedLog response = AnalyzedLog.builder()
+                .id(1L)
+                .category("Memory")
+                .rootCause("Heap space exhausted")
+                .suggestedFix("Increase -Xmx")
+                .customerUpdate("We have identified a memory issue.")
+                .severity("HIGH")
+                .confidence(98)
+                .matchedPatterns(List.of("OutOfMemoryError", "heap space"))
+                .build();
+
+        when(analysisService.analyze(anyString())).thenReturn(response);
+
+        mockMvc.perform(post("/api/analyze")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"logText\":\"OutOfMemoryError heap space in pipeline\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.matchedPatterns", hasSize(2)))
+                .andExpect(jsonPath("$.matchedPatterns[0]", is("OutOfMemoryError")))
+                .andExpect(jsonPath("$.matchedPatterns[1]", is("heap space")));
+    }
+
+    @Test
+    void shouldReturnEmptyMatchedPatternsForUnclassifiedResult() throws Exception {
+        AnalyzedLog response = AnalyzedLog.builder()
+                .id(2L)
+                .category("Unclassified")
+                .rootCause("Unable to determine root cause from the provided log.")
+                .suggestedFix("Please review the log manually or contact support.")
+                .customerUpdate("We are investigating the issue.")
+                .severity("MEDIUM")
+                .confidence(20)
+                .matchedPatterns(List.of())
+                .build();
+
+        when(analysisService.analyze(anyString())).thenReturn(response);
+
+        mockMvc.perform(post("/api/analyze")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"logText\":\"no recognizable patterns in this log\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.matchedPatterns", hasSize(0)))
+                .andExpect(jsonPath("$.category", is("Unclassified")))
+                .andExpect(jsonPath("$.confidence", is(20)));
+    }
+
+    @Test
     void shouldReturn400WhenLogTextIsBlank() throws Exception {
         String requestBody = objectMapper.writeValueAsString(Map.of("logText", ""));
 
