@@ -1,0 +1,8 @@
+{
+  "category": "Memory",
+  "rootCause": "Java heap space exhausted during pipeline execution",
+  "suggestedFix": "Increase JVM heap size using -Xmx flag or optimize memory usage in the build",
+  "customerUpdate": "We have identified the root cause of your pipeline failure as: Java heap space exhausted during pipeline execution. We recommend the following action: Increase JVM heap size using -Xmx flag or optimize memory usage in the build",
+  "severity": "HIGH",
+  "confidence": 98
+}

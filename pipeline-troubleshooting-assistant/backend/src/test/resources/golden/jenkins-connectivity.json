@@ -1,0 +1,8 @@
+{
+  "category": "Network",
+  "rootCause": "Service or dependency is unreachable during pipeline execution",
+  "suggestedFix": "Verify network connectivity and ensure all required services are running",
+  "customerUpdate": "We have identified the root cause of your pipeline failure as: Service or dependency is unreachable during pipeline execution. We recommend the following action: Verify network connectivity and ensure all required services are running",
+  "severity": "HIGH",
+  "confidence": 98
+}

@@ -1,0 +1,8 @@
+{
+  "category": "Permissions",
+  "rootCause": "Insufficient permissions to access a resource or execute an operation",
+  "suggestedFix": "Review and update file/directory permissions or IAM roles",
+  "customerUpdate": "We have identified the root cause of your pipeline failure as: Insufficient permissions to access a resource or execute an operation. We recommend the following action: Review and update file/directory permissions or IAM roles",
+  "severity": "MEDIUM",
+  "confidence": 98
+}

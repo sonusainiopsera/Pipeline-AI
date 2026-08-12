@@ -1,0 +1,8 @@
+{
+  "category": "Unclassified",
+  "rootCause": "Unable to determine root cause from the provided log.",
+  "suggestedFix": "Please review the log manually or contact support.",
+  "customerUpdate": "We are investigating the pipeline failure and will provide an update shortly.",
+  "severity": "MEDIUM",
+  "confidence": 20
+}

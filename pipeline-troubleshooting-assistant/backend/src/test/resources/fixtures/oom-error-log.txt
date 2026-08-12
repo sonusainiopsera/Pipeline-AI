@@ -1,0 +1,7 @@
+[2025-01-15 10:30:00] ERROR Pipeline Build FAILED in stage 'Compile Sources'
+[2025-01-15 10:30:01] FATAL Exception in thread "main" java.lang.OutOfMemoryError: Java Heap Space
+[2025-01-15 10:30:01]     at com.example.pipeline.Build.processDependencies(Build.java:347)
+[2025-01-15 10:30:01]     at com.example.pipeline.Build.execute(Build.java:42)
+[2025-01-15 10:30:02] ERROR JVM terminated: heap space exhaustion detected during compilation
+[2025-01-15 10:30:02] FATAL OutOfMemoryError: GC overhead limit exceeded — heap space is full
+[2025-01-15 10:30:03] Build stage 'Compile' FAILED — exit code: 137 (OOM killed by OS)

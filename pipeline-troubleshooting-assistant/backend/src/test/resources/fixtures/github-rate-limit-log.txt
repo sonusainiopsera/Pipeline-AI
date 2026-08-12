@@ -1,0 +1,8 @@
+[2025-01-15 13:00:00] ERROR Test Suite execution failed in pipeline stage 'Unit Tests'
+[2025-01-15 13:00:01] JUnit test runner output:
+[2025-01-15 13:00:01]   FAILED com.example.service.UserServiceTest#testFetchUser
+[2025-01-15 13:00:01]   assertion error: expected:<200> but was:<429> — GitHub rate limit exceeded
+[2025-01-15 13:00:02]   FAILED com.example.controller.AuthControllerTest#testLogin
+[2025-01-15 13:00:02]   assertion error: 403 Forbidden returned by GitHub API
+[2025-01-15 13:00:03] Test Suite summary: 4 tests failed, 18 passed
+[2025-01-15 13:00:03] Build terminated — test failed verification gate blocked merge

@@ -1,0 +1,8 @@
+{
+  "category": "Docker",
+  "rootCause": "Docker image build or container operation failed during pipeline",
+  "suggestedFix": "Review Dockerfile for errors and ensure base images are accessible",
+  "customerUpdate": "We have identified the root cause of your pipeline failure as: Docker image build or container operation failed during pipeline. We recommend the following action: Review Dockerfile for errors and ensure base images are accessible",
+  "severity": "HIGH",
+  "confidence": 98
+}

@@ -1,0 +1,8 @@
+{
+  "category": "Testing",
+  "rootCause": "One or more automated tests failed during the pipeline execution",
+  "suggestedFix": "Review test output, fix failing tests, and ensure test environment is properly configured",
+  "customerUpdate": "We have identified the root cause of your pipeline failure as: One or more automated tests failed during the pipeline execution. We recommend the following action: Review test output, fix failing tests, and ensure test environment is properly configured",
+  "severity": "MEDIUM",
+  "confidence": 98
+}

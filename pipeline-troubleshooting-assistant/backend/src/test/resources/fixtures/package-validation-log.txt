@@ -1,0 +1,7 @@
+[2025-01-15 11:45:00] ERROR npm install FAILED in stage 'Install Dependencies'
+[2025-01-15 11:45:01] npm ERR! code ERESOLVE
+[2025-01-15 11:45:01] npm ERR! ERESOLVE unable to resolve dependency tree
+[2025-01-15 11:45:02] npm ERR! Found conflicting packages in node_modules directory
+[2025-01-15 11:45:02] npm ERR! Check package.json for incompatible peer versions
+[2025-01-15 11:45:02] npm ERR! Dependency resolution failed: react@18.0.0 vs react@17.0.0
+[2025-01-15 11:45:03] ERROR Build stage 'Install' aborted — npm install exited with code 1

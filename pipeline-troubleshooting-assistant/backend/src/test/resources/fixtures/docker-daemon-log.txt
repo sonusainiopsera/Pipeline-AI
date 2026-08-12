@@ -1,0 +1,6 @@
+[2025-01-15 16:00:00] ERROR Docker Build Failed in CI pipeline stage 'Build and Push Image'
+[2025-01-15 16:00:01] ERROR Error response from daemon: Dockerfile parse error line 12: unknown instruction: RUNC
+[2025-01-15 16:00:02] ERROR Image pull failed: registry.example.com/base-image:3.14 — manifest not found
+[2025-01-15 16:00:03] ERROR failed to create container overlay2 layer: no space left on device
+[2025-01-15 16:00:03] ERROR Cannot start container myapp-service: port 8080 already allocated
+[2025-01-15 16:00:04] Build aborted — docker daemon returned exit code 1

@@ -1,0 +1,8 @@
+{
+  "category": "Dependency",
+  "rootCause": "Node.js package installation or dependency resolution failed",
+  "suggestedFix": "Clear npm cache and delete node_modules, then reinstall dependencies",
+  "customerUpdate": "We have identified the root cause of your pipeline failure as: Node.js package installation or dependency resolution failed. We recommend the following action: Clear npm cache and delete node_modules, then reinstall dependencies",
+  "severity": "MEDIUM",
+  "confidence": 98
+}

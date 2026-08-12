@@ -1,0 +1,7 @@
+[2025-01-15 14:22:00] ERROR Pipeline stage 'Deploy to Staging' FAILED
+[2025-01-15 14:22:01] ERROR java.net.ConnectException: Connection refused (Connection refused)
+[2025-01-15 14:22:01]     at java.net.PlainSocketImpl.socketConnect(Native Method)
+[2025-01-15 14:22:02] ERROR ECONNREFUSED 10.0.1.15:8443 — jenkins-agent service unavailable
+[2025-01-15 14:22:30] ERROR Request to jenkins-master:8080 timed out: Connection Timeout after 30s
+[2025-01-15 14:22:30] WARN Retry 3/3 failed — remote service unreachable
+[2025-01-15 14:22:31] Build aborted: cannot reach deployment target
