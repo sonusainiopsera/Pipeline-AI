@@ -161,6 +161,7 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
                     }
                   }}
                   aria-current={page === item.id ? 'page' : undefined}
+                  aria-label={item.label}
                   style={{
                     width: '100%',
                     background: page === item.id ? 'rgba(96,165,250,0.15)' : 'none',

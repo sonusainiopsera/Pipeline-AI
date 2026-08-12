@@ -313,12 +313,21 @@ export default function KnowledgeBasePage() {
                 </button>
               </div>
 
-              {modalError && (
+              {/* Always rendered so screen readers register the live region before
+                  content changes (aria-live must pre-exist in the DOM). */}
+              <p
+                id="kb-form-modal-error"
+                role="alert"
+                style={{
+                  color: '#b91c1c',
+                  marginBottom: modalError ? '16px' : 0,
+                  fontSize: '0.9em',
+                  minHeight: 0,
+                }}
+              >
                 {/* #b91c1c on #fff: ~6.5:1 — passes 4.5:1 ✓ */}
-              <p role="alert" style={{ color: '#b91c1c', marginBottom: '16px', fontSize: '0.9em' }}>
-                  {modalError}
-                </p>
-              )}
+                {modalError || ''}
+              </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
@@ -333,6 +342,7 @@ export default function KnowledgeBasePage() {
                     onChange={handleFormChange}
                     required
                     aria-required="true"
+                    aria-describedby="kb-form-modal-error"
                     style={INPUT_STYLE}
                   />
                 </div>
@@ -349,6 +359,7 @@ export default function KnowledgeBasePage() {
                     onChange={handleFormChange}
                     required
                     aria-required="true"
+                    aria-describedby="kb-form-modal-error"
                     style={INPUT_STYLE}
                   />
                 </div>
@@ -473,12 +484,19 @@ export default function KnowledgeBasePage() {
                 <strong>{deleteEntry.errorPattern}</strong>? This action cannot be undone.
               </p>
 
-              {modalError && (
+              <p
+                id="kb-delete-modal-error"
+                role="alert"
+                style={{
+                  color: '#b91c1c',
+                  marginBottom: modalError ? '16px' : 0,
+                  fontSize: '0.9em',
+                  minHeight: 0,
+                }}
+              >
                 {/* #b91c1c on #fff: ~6.5:1 — passes 4.5:1 ✓ */}
-              <p role="alert" style={{ color: '#b91c1c', marginBottom: '16px', fontSize: '0.9em' }}>
-                  {modalError}
-                </p>
-              )}
+                {modalError || ''}
+              </p>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Layout, { Page } from './components/Layout';
+import RouteAnnouncer from './components/RouteAnnouncer';
 import DashboardPage from './pages/Dashboard';
 import AnalyzePage from './pages/Analyze';
 import KnowledgeBasePage from './pages/KnowledgeBase';
@@ -22,8 +23,12 @@ export default function App() {
   };
 
   return (
-    <Layout page={page} onNavigate={setPage}>
-      {renderPage()}
-    </Layout>
+    <>
+      {/* Announces page transitions to screen readers and updates document.title */}
+      <RouteAnnouncer page={page} />
+      <Layout page={page} onNavigate={setPage}>
+        {renderPage()}
+      </Layout>
+    </>
   );
 }
