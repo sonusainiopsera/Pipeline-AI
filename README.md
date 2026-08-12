@@ -59,6 +59,27 @@ Docker Compose reads `.env` automatically from the same directory as `docker-com
 
 For CI/CD pipelines without a `.env` file, set the variables directly in the runner environment instead.
 
+### Installing Pre-commit Hooks (security guardrails)
+
+A pre-commit hook scans staged files for hardcoded secrets before every commit. Run once after cloning:
+
+```bash
+bash scripts/install-hooks.sh
+```
+
+The hook detects: AWS access keys, Bearer tokens, quoted password assignments, private key headers, and JDBC URLs with embedded credentials. If a secret is found, the commit is blocked with a message identifying the file and line number.
+
+To bypass for a known false positive (e.g., a test fixture):
+```bash
+git commit --no-verify
+```
+
+**Requirement:** GNU `grep` (the default on Linux). On macOS:
+```bash
+brew install grep
+export PATH="/opt/homebrew/opt/grep/libexec/gnubin:$PATH"
+```
+
 ### Running with Docker Compose
 
 ```bash

@@ -70,6 +70,58 @@ jobs:
           reporter: java-junit
           fail-on-error: false
 
+  # ── Secret scan: grep all tracked files for hardcoded credentials ────────────
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scan for hardcoded secrets
+        run: |
+          FOUND=0
+
+          # Tracked text files, excluding known-safe and intentional-pattern paths
+          SCAN_FILES=$(git ls-files | grep -vE \
+            '(\.env$|\.env\.example$|package-lock\.json$|yarn\.lock$|\.lock$|node_modules/|\.class$|\.jar$|\.war$|\.png$|\.jpg$|\.jpeg$|\.gif$|\.ico$|\.svg$|target/|build/|dist/|/src/test/|tests/secret-detection/|\.test\.(ts|tsx|js|jsx)$|\.spec\.(ts|tsx|js|jsx)$)' \
+            || true)
+
+          scan() {
+            local name="$1"
+            local pattern="$2"
+            local matches
+
+            if [ -z "$SCAN_FILES" ]; then return; fi
+            while IFS= read -r f; do
+              [ -f "$f" ] || continue
+              grep -qI '' "$f" 2>/dev/null || continue
+              matches=$(grep -nP -e "$pattern" "$f" 2>/dev/null || true)
+              if [ -n "$matches" ]; then
+                echo "[SECRET DETECTED] $name — $f"
+                printf '%s\n' "$matches" | sed 's/^/  /'
+                FOUND=1
+              fi
+            done <<< "$SCAN_FILES"
+          }
+
+          scan "AWS Access Key"                  'AKIA[A-Z0-9]{16}'
+          scan "Generic API/Secret Key"          '(?i)(api_key|api_secret|secret_key)\s*[=:]\s*[A-Za-z0-9_-]{20,}'
+          scan "Bearer Token"                    'Bearer\s+[A-Za-z0-9._~+\/-]{20,}'
+          scan "Password Assignment (quoted)"    '(?i)(password|passwd)\s*[:=]\s*[\x22\x27][^\x22\x27]{3,}[\x22\x27]'
+          scan "Private Key Header"              '-----BEGIN\s*(RSA |EC |OPENSSH )?PRIVATE KEY-----'
+          scan "JDBC URL with Embedded Creds"    'jdbc:[a-z]+://[^:/?]+:[^@/?]+@'
+
+          if [ "$FOUND" -ne 0 ]; then
+            echo ""
+            echo "CI FAILED: hardcoded secret(s) found in tracked files."
+            echo "Fix the issues above and push again."
+            exit 1
+          fi
+
+          echo "Secret scan passed — no findings."
+
   # ── Frontend: TypeScript type-check, Vite build, Vitest unit tests ──────────
   frontend:
     name: Frontend (Node 22 / Vite)

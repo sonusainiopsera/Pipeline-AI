@@ -91,3 +91,10 @@
 - **Files:** 1 (+214/-0)
 - **Duration:** 404ss
 - **Approach:** Created AnalysisControllerTest.java using @WebMvcTest(AnalysisController.class) following the established pattern from ErrorControllerTest.java. Used @MockBean for AnalysisService and DashboardService. Built 11 test methods covering all 3 endpoints: 6 for POST /api/analyze (happy path, blank/missing/whitespace logText, wrong content-type, malformed JSON), 2 for GET /api/history (2-item list, empty list), 3 for GET /api/dashboard (known values, zero counts, content-type verification). All assertions use contentTypeCompatibleWith(APPLICATION_JSON) and jsonPath matchers with Hamcrest is()/hasSize(). Dashboard tests assert against actual DashboardService.getStats() keys ('totalErrors', 'analyzedLogs') rather than the WO's planned DTO field names which differ from the implementation. No production code was modified.
+
+## WO-011: User Story: WO-011 - Add Pre-Commit Hook Blocking Hardcoded Secrets
+- **Status:** completed
+- **Commit:** `5885537`
+- **Files:** 5 (+268/-0)
+- **Duration:** 710ss
+- **Approach:** Implemented a shell-script-based pre-commit hook (zero external dependencies beyond git and GNU grep) using grep -P (PCRE) patterns for six secret types: AWS access keys (AKIA[A-Z0-9]{16}), generic API/secret keys, Bearer tokens (≥20 chars), quoted password assignments, private key headers (BEGIN RSA/EC/OPENSSH PRIVATE KEY), and JDBC URLs with embedded credentials. Used grep -nP -e to avoid pattern-starts-with-dash mis-parsing. Excluded test source files (/src/test/, *.test.ts, *.spec.ts etc.) from scanning since AnalysisIntegrationTest.java and sanitization.test.ts intentionally contain fake credentials for testing the sanitizer. Added CI secret-scan job mirroring the same six patterns against all tracked files; simulation confirmed zero findings. Created a six-pattern test fixture (one fake value per pattern), install script (git config core.hooksPath), and README section.

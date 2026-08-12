@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# Pre-commit hook: blocks commits containing hardcoded secrets.
+#
+# Install once after cloning:
+#   bash scripts/install-hooks.sh
+#
+# To bypass for a known false positive:
+#   git commit --no-verify
+
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+FOUND=0
+
+# ── Collect staged text files ─────────────────────────────────────────────────
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -vE \
+  '(\.env$|\.env\.example$|package-lock\.json$|yarn\.lock$|\.lock$|node_modules/|\.class$|\.jar$|\.war$|\.png$|\.jpg$|\.jpeg$|\.gif$|\.ico$|\.svg$|target/|build/|dist/|/src/test/|tests/secret-detection/|\.test\.(ts|tsx|js|jsx)$|\.spec\.(ts|tsx|js|jsx)$)' \
+  || true)
+
+if [ -z "$STAGED_FILES" ]; then
+  exit 0
+fi
+
+SCANLIST=$(mktemp)
+trap 'rm -f "$SCANLIST"' EXIT
+
+while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  # Skip binary files (grep -I exits 1 on binary, 0 on text)
+  grep -qI '' "$f" 2>/dev/null || continue
+  printf '%s\n' "$f" >> "$SCANLIST"
+done <<< "$STAGED_FILES"
+
+[ -s "$SCANLIST" ] || exit 0
+
+# ── Pattern scanner ───────────────────────────────────────────────────────────
+# scan_pattern <description> <pcre_pattern> <remedy>
+# Uses grep -P (Perl-compatible regex). Requires GNU grep (Linux default;
+# macOS: brew install grep && alias grep=ggrep).
+
+scan_pattern() {
+  local name="$1"
+  local pattern="$2"
+  local remedy="$3"
+  local matches
+
+  while IFS= read -r f; do
+    matches=$(grep -nP -e "$pattern" "$f" 2>/dev/null || true)
+    if [ -n "$matches" ]; then
+      printf "${RED}[SECRET DETECTED]${NC} ${YELLOW}%s${NC} — ${CYAN}%s${NC}\n" "$name" "$f"
+      printf '%s\n' "$matches" | sed 's/^/  /'
+      printf "  ${YELLOW}Remedy:${NC} %s\n\n" "$remedy"
+      FOUND=1
+    fi
+  done < "$SCANLIST"
+}
+
+# ── Secret patterns ───────────────────────────────────────────────────────────
+
+scan_pattern \
+  "AWS Access Key" \
+  'AKIA[A-Z0-9]{16}' \
+  "Move to .env and reference via an environment variable"
+
+scan_pattern \
+  "Generic API/Secret Key" \
+  '(?i)(api_key|api_secret|secret_key)\s*[=:]\s*[A-Za-z0-9_-]{20,}' \
+  "Move to .env and reference as an environment variable"
+
+scan_pattern \
+  "Bearer Token" \
+  'Bearer\s+[A-Za-z0-9._~+\/-]{20,}' \
+  "Remove from source code — tokens must not be committed"
+
+scan_pattern \
+  "Password Assignment (quoted)" \
+  '(?i)(password|passwd)\s*[:=]\s*[\x22\x27][^\x22\x27]{3,}[\x22\x27]' \
+  "Move to .env and reference as \${VARIABLE_NAME}"
+
+scan_pattern \
+  "Private Key Header" \
+  '-----BEGIN\s*(RSA |EC |OPENSSH )?PRIVATE KEY-----' \
+  "Private keys must never be committed; use a secrets manager"
+
+scan_pattern \
+  "JDBC URL with Embedded Credentials" \
+  'jdbc:[a-z]+://[^:/?]+:[^@/?]+@' \
+  "Move credentials to .env and reference via \${DB_URL}"
+
+# ── Result ────────────────────────────────────────────────────────────────────
+
+if [ "$FOUND" -ne 0 ]; then
+  printf "${RED}${BOLD}══════════════════════════════════════════════════════════════${NC}\n"
+  printf "${RED}${BOLD}  Commit BLOCKED: hardcoded secret(s) detected in staged files.${NC}\n"
+  printf "${RED}${BOLD}  Fix all issues above, then re-stage and re-commit.${NC}\n"
+  printf "${RED}${BOLD}  False positive? Use: git commit --no-verify${NC}\n"
+  printf "${RED}${BOLD}══════════════════════════════════════════════════════════════${NC}\n"
+  exit 1
+fi
+
+exit 0
