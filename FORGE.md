@@ -14,3 +14,10 @@
 - **Files:** 21 (+873/-1)
 - **Duration:** 440ss
 - **Approach:** Scaffolded the full Spring Boot 3.3.5 / Java 17 project under pipeline-troubleshooting-assistant/backend/ since the repository was empty. Then implemented WO-001: added H2 (test-scoped) dependency, maven-surefire-plugin 3.2.5, and jacoco-maven-plugin 0.8.12 to pom.xml, created SmokeTest.java with @SpringBootTest/@ActiveProfiles("test"), and created application-test.yml with H2 in-memory datasource + ddl-auto:create so the Spring context loads without a PostgreSQL instance during tests.
+
+## WO-003: User Story: WO-003 - Unit Tests for AnalysisService Scoring Logic
+- **Status:** completed
+- **Commit:** `db76588`
+- **Files:** 1 (+269/-0)
+- **Duration:** 200ss
+- **Approach:** Created a pure Mockito unit test class for AnalysisService with 14 test methods. Used @ExtendWith(MockitoExtension.class) with @Mock on ErrorRepository and AnalyzedLogRepository and @InjectMocks on AnalysisService. A buildKnowledgeBaseEntry() helper constructs ErrorKnowledgeBase entities for each test. Each test mocks errorRepository.findAll() to return a controlled list and mocks analyzedLogRepository.save() to pass-through the argument (so returned fields can be asserted). Tests cover all branches of analyze(): matching path, unclassified fallback, confidence formula arithmetic including integer division truncation, best-match tie-breaking, case-insensitivity, whitespace trimming, customer update template content, and ArgumentCaptor verification of the persisted entity.
