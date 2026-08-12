@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { PanelLeftClose, PanelLeftOpen, BarChart2, Search, BookOpen, Clock, ShieldCheck } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, BarChart2, Search, BookOpen, Clock, ShieldCheck, Settings } from 'lucide-react';
 import SkipLink from './SkipLink';
 import { getUserRole } from '../api';
 import type { UserRole } from '../api';
 
-export type Page = 'dashboard' | 'analyze' | 'knowledge-base' | 'history' | 'audit-log';
+export type Page = 'dashboard' | 'analyze' | 'knowledge-base' | 'history' | 'audit-log' | 'settings';
 
 interface NavItem {
   id: Page;
@@ -19,6 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'knowledge-base', label: 'Knowledge Base', icon: <BookOpen size={18} aria-hidden="true" /> },
   { id: 'history', label: 'History', icon: <Clock size={18} aria-hidden="true" /> },
   { id: 'audit-log', label: 'Audit Log', icon: <ShieldCheck size={18} aria-hidden="true" />, managerOnly: true },
+  { id: 'settings', label: 'Settings', icon: <Settings size={18} aria-hidden="true" /> },
 ];
 
 interface LayoutProps {

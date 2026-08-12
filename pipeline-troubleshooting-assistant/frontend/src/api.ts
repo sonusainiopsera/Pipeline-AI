@@ -3,6 +3,7 @@ import type {
   AuditLogEntry,
   AuditLogPage,
   AuthMessageResponse,
+  ChangePasswordRequest,
   HistoryItem,
   HistoryListItem,
   KnowledgeBaseEntry,
@@ -15,6 +16,9 @@ import type {
   MfaVerifyRequest,
   PageResponse,
   RegisterRequest,
+  SessionInfo,
+  UpdateProfileRequest,
+  UserProfile,
   UserRole,
 } from './types';
 
@@ -23,6 +27,7 @@ export type {
   AuditLogEntry,
   AuditLogPage,
   AuthMessageResponse,
+  ChangePasswordRequest,
   HistoryItem,
   HistoryListItem,
   KnowledgeBaseEntry,
@@ -35,6 +40,9 @@ export type {
   MfaVerifyRequest,
   PageResponse,
   RegisterRequest,
+  SessionInfo,
+  UpdateProfileRequest,
+  UserProfile,
   UserRole,
 };
 
@@ -180,11 +188,41 @@ export async function getMe(): Promise<LoginResponse> {
 
 export async function getUserRole(): Promise<UserRole | null> {
   try {
-    const user = await getMe();
-    return (user.role as UserRole) ?? null;
+    const profile = await getProfile();
+    return (profile.role as UserRole) ?? null;
   } catch {
     return null;
   }
+}
+
+// ── User profile endpoints ─────────────────────────────────────────────────────
+
+export async function getProfile(): Promise<UserProfile> {
+  return request<UserProfile>(`${BASE}/users/me`);
+}
+
+export async function updateProfile(data: UpdateProfileRequest): Promise<UserProfile> {
+  return request<UserProfile>(`${BASE}/users/me`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
+  return request<{ message: string }>(`${BASE}/users/me/change-password`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getSessions(): Promise<SessionInfo[]> {
+  return request<SessionInfo[]>(`${BASE}/users/me/sessions`);
+}
+
+export async function revokeSession(sessionId: string): Promise<void> {
+  return request<void>(`${BASE}/users/me/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function mfaSetup(): Promise<MfaSetupResponse> {

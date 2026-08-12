@@ -609,3 +609,10 @@
 - **Files:** 14 (+1339/-4)
 - **Duration:** 640ss
 - **Approach:** Built on top of the existing AuditLog entity and AuditLogRepository (already in codebase from security epic). Extended the repository with JpaSpecificationExecutor to enable dynamic Specification-based queries. Created AuditLogSpecification with four static filter methods. Added AuditLogDTO record to Responses.java (exposing display-safe fields, excluding actorId). Created AuditLogService delegating to the repository with a composed Specification. Created AuditLogController with @PreAuthorize('hasRole(MANAGER)'), date range validation, and 100-record page size cap. Frontend: added AuditLogEntry/AuditLogPage types, getAuditLogs() with URLSearchParams-based filter query construction, AuditLog.tsx page with filter form/table/pagination, and wired into App.tsx routing and Layout.tsx sidebar (conditional on MANAGER role via getUserRole()).
+
+## WO-081: User Story: WO-081 - Build User Settings and Profile Page
+- **Status:** completed
+- **Commit:** `6a82796`
+- **Files:** 15 (+1264/-4)
+- **Duration:** 737ss
+- **Approach:** Built UserProfileController at /api/users/me with 5 endpoints (GET profile, PUT profile, POST change-password, GET sessions, DELETE sessions/{id}). UserProfileService extracts the authenticated user's email from the JWT principal (Authentication.getName()) to look up the User entity, then delegates to UserRepository and RefreshTokenRepository. Added findAllByUserId and findByIdAndUserId to RefreshTokenRepository. Password change validates current password via BCryptPasswordEncoder.matches(), rejects same-as-current, enforces complexity regex, then deletes all refresh tokens for security. SessionDTO uses createdAt as lastUsedAt fallback since RefreshToken has no lastUsedAt field; ipAddress is null since RefreshToken does not store IP. Frontend Settings.tsx has four sections (Profile, Security, Active Sessions, Appearance) with react-hot-toast notifications. getUserRole() in api.ts updated to call getProfile() at /api/users/me instead of the previously broken /api/auth/me endpoint.

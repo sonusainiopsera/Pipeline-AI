@@ -2,6 +2,8 @@ package com.opsera.pipelineassistant.dto;
 
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.AuditLog;
+import com.opsera.pipelineassistant.model.RefreshToken;
+import com.opsera.pipelineassistant.model.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -47,6 +49,42 @@ public final class Responses {
             long analysesLast30Days,
             List<CategoryStat> topCategories
     ) {}
+
+    public record UserProfileDTO(
+            String displayName,
+            String email,
+            String role,
+            boolean mfaEnabled,
+            LocalDateTime createdAt
+    ) {
+        public static UserProfileDTO from(User user) {
+            return new UserProfileDTO(
+                    user.getDisplayName(),
+                    user.getEmail(),
+                    user.getRole().name(),
+                    Boolean.TRUE.equals(user.getMfaEnabled()),
+                    user.getCreatedAt()
+            );
+        }
+    }
+
+    public record SessionDTO(
+            String sessionId,
+            LocalDateTime createdAt,
+            LocalDateTime lastUsedAt,
+            String ipAddress,
+            boolean isCurrent
+    ) {
+        public static SessionDTO from(RefreshToken token) {
+            return new SessionDTO(
+                    token.getId().toString(),
+                    token.getCreatedAt(),
+                    token.getCreatedAt(),
+                    null,
+                    false
+            );
+        }
+    }
 
     public record RegisterResponse(String message) {}
 

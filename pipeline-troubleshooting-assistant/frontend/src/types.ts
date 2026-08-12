@@ -82,6 +82,33 @@ export interface AuditLogPage {
   size: number;
 }
 
+// ── User profile types ────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  displayName: string;
+  email: string;
+  role: string;
+  mfaEnabled: boolean;
+  createdAt: string;
+}
+
+export interface UpdateProfileRequest {
+  displayName: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface SessionInfo {
+  sessionId: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  ipAddress: string | null;
+  isCurrent: boolean;
+}
+
 // ── Auth types ────────────────────────────────────────────────────────────────
 
 export interface LoginRequest {

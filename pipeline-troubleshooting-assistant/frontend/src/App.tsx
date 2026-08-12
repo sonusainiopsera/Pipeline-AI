@@ -6,6 +6,7 @@ import AnalyzePage from './pages/Analyze';
 import KnowledgeBasePage from './pages/KnowledgeBase';
 import HistoryPage from './pages/History';
 import AuditLogPage from './pages/AuditLog';
+import SettingsPage from './pages/Settings';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import MfaVerifyPage from './pages/MfaVerify';
@@ -51,6 +52,8 @@ export default function App() {
         return <HistoryPage />;
       case 'audit-log':
         return <AuditLogPage />;
+      case 'settings':
+        return <SettingsPage />;
     }
   };
 
