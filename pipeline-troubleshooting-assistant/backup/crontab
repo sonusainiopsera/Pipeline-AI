@@ -1,0 +1,1 @@
+BACKUP_CRON_SCHEDULE_PLACEHOLDER /scripts/backup.sh >> /proc/1/fd/1 2>&1
