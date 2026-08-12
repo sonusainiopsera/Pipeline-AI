@@ -57,6 +57,9 @@ jobs:
 
       - name: Build and verify with Maven
         env:
+          # application-ci.yml activates ddl-auto: validate so Hibernate verifies
+          # JPA entity alignment after Flyway applies all migrations.
+          SPRING_PROFILES_ACTIVE: ci
           DB_URL: jdbc:postgresql://localhost:5432/pipeline_assistant_test
           DB_USERNAME: test
           DB_PASSWORD: test

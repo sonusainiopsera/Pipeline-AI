@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    # Connection parameters resolved from GitHub Actions environment variables
+    # (set in the CI workflow env block of the backend job).
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # Fail fast if Flyway migrations leave the schema out of sync with JPA entities.
+      # All schema changes must go through versioned migration scripts — CI enforces this.
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    # Baseline-on-migrate is enabled in application.yml (global default).
+    # The CI database is always clean, so baseline-on-migrate will not trigger;
+    # Flyway applies V1, V2, V3 in sequence and Hibernate validates afterwards.
