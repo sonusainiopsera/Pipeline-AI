@@ -336,3 +336,10 @@
 - **Files:** 4 (+447/-0)
 - **Duration:** 358ss
 - **Approach:** Extended the existing GitHub Actions CI workflow (which already had a PostgreSQL 16 service container and ran mvn clean verify) by adding SPRING_PROFILES_ACTIVE=ci to the Maven build environment. Created application-ci.yml Spring profile that activates ddl-auto: validate and explicit Flyway settings — this causes CI to apply all migrations via Flyway and then validate JPA entity alignment, failing fast on any schema mismatch. Created flyway-baseline.sh with pre-flight checks (table existence verification, double-baseline guard, backup reminder) and post-verification. Created a comprehensive runbook covering all required sections: pre-baseline checklist, baseline procedure with exact CLI commands for flyway baseline/info/validate/repair, post-baseline verification, migration failure troubleshooting (checksum mismatch, syntax errors, out-of-order, duplicates), rollback procedure with estimated RTO under 5 minutes, and monitoring via flyway_schema_history queries and startup log patterns.
+
+## WO-017: User Story: WO-017 - Add Spring Security and JWT Dependencies
+- **Status:** completed
+- **Commit:** `d49d177`
+- **Files:** 4 (+106/-0)
+- **Duration:** 215ss
+- **Approach:** Added all required security dependencies to pom.xml (spring-boot-starter-security, jjwt-api/impl/jackson 0.12.6 with impl and jackson as runtime scope, spring-security-test for test scope). Created SecurityConfig.java in the existing config package with @Configuration @EnableWebSecurity that defines a SecurityFilterChain bean — CSRF disabled (REST API), sessions set to STATELESS, CORS delegated to the existing WebConfig WebMvcConfigurer via Customizer.withDefaults(), and all requests permitted (anyRequest().permitAll()) as the auth-optional transitional state. Added JWT placeholder properties to application.yml under the jwt prefix with environment variable resolution and safe defaults. Created SecurityConfigTest following the CacheConfigTest pattern to verify the SecurityFilterChain bean loads in the Spring context with the test profile.

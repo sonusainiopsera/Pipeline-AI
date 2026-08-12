@@ -49,6 +49,14 @@ cache:
   knowledge-base:
     ttl-minutes: 10
 
+jwt:
+  # Placeholder values — override with real secrets via environment variables in production.
+  # secret must be at least 256 bits (32 bytes) for HS256; use a strong random value.
+  secret: ${JWT_SECRET:placeholder-secret-key-replace-in-production-must-be-256-bits-minimum}
+  # Token lifetimes in seconds
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:86400}
+
 management:
   endpoints:
     web:
