@@ -1,0 +1,4 @@
+Pipeline failed during deployment to production environment
+Error: AKIAIOSFODNN7EXAMPLE authentication failed
+Access denied for resource arn:aws:s3:::my-deploy-bucket
+Build step 'Upload artifacts' returned exit code 403

@@ -1,0 +1,4 @@
+HTTP 401 Unauthorized response received from upstream service
+Request headers sent: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.fakesignature
+Token validation failed: signature verification error
+Retrying with refreshed credentials...

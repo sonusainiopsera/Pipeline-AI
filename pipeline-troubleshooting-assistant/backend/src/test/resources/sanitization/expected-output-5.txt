@@ -1,0 +1,9 @@
+CI/CD pipeline credential leak detected in build log
+AWS credential: [AWS_KEY_REDACTED] rejected by IAM
+Auth header: [BEARER_TOKEN_REDACTED]
+Database: passwd=[PASSWORD_REDACTED] unreachable from [IP_REDACTED]
+API: apikey=[API_KEY_REDACTED] quota exceeded
+Notifying: [EMAIL_REDACTED] for incident review
+Private key found in config:
+[PRIVATE_KEY_REDACTED]
+Pipeline halted for security review

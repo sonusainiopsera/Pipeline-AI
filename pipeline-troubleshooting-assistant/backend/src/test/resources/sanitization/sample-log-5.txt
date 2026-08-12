@@ -1,0 +1,12 @@
+CI/CD pipeline credential leak detected in build log
+AWS credential: AKIAIOSFODNN7EXAMPLE rejected by IAM
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fakepayload.fakesig
+Database: passwd=PipelineDbPass99 unreachable from 10.20.30.40
+API: apikey=ABCDEF1234567890abcdef12345678 quota exceeded
+Notifying: ops@pipeline.internal for incident review
+Private key found in config:
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAFAKEKEYDATANOTREALBASE64ENCODEDPRIVATEKEY
+ANOTHERLINEFAKEKEYDATA1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ
+-----END RSA PRIVATE KEY-----
+Pipeline halted for security review

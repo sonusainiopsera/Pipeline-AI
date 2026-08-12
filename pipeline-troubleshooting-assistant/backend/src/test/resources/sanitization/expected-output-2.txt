@@ -1,0 +1,4 @@
+HTTP 401 Unauthorized response received from upstream service
+Request headers sent: Authorization: [BEARER_TOKEN_REDACTED]
+Token validation failed: signature verification error
+Retrying with refreshed credentials...

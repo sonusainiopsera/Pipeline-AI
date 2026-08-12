@@ -1,0 +1,4 @@
+Database connection pool exhausted after retry
+Config dump: password=[PASSWORD_REDACTED] host=db.internal port=5432
+Third-party integration failed: api_key=[API_KEY_REDACTED] rejected by remote
+Connection refused, check firewall rules

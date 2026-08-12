@@ -1,0 +1,4 @@
+Unauthorized access attempt logged by audit system
+User: john.doe@company.example.com attempted privileged action
+Source IP: 10.0.1.42 proxied via 172.16.0.1
+Access request denied by policy engine at 2024-01-15 09:30:00

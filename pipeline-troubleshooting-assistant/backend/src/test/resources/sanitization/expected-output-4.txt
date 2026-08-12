@@ -1,0 +1,4 @@
+Unauthorized access attempt logged by audit system
+User: [EMAIL_REDACTED] attempted privileged action
+Source IP: [IP_REDACTED] proxied via [IP_REDACTED]
+Access request denied by policy engine at 2024-01-15 09:30:00

@@ -1,0 +1,4 @@
+Database connection pool exhausted after retry
+Config dump: password=MyHardcodedPass123 host=db.internal port=5432
+Third-party integration failed: api_key=sk-abcdefghijklmnopqrstuvwxyz123456 rejected by remote
+Connection refused, check firewall rules
