@@ -154,3 +154,10 @@
 - **Files:** 7 (+349/-0)
 - **Duration:** 322ss
 - **Approach:** Added @Size constraints to AnalyzeRequest and ErrorRequest DTOs matching the PRD limits. Created ApiExceptionHandler (@RestControllerAdvice) that intercepts MethodArgumentNotValidException: when a logText @Size violation is detected (by matching the exact message string), it returns HTTP 413 with a structured body; all other validation failures return HTTP 400 with field-level error details. Added spring.servlet.multipart.max-request-size: 2MB and server.tomcat.max-http-form-post-size: 2MB to application.yml as transport-layer defense. Created RequestsValidationTest.java (14 unit tests using Jakarta Validator directly, covering boundary values for all constrained fields). Added 5 new @WebMvcTest integration tests to the existing controller test files to verify 413/400 status codes and response body structure for size violations.
+
+## WO-041: User Story: WO-041 - Add Nginx Security Headers and Request Size Limits
+- **Status:** completed
+- **Commit:** `0b63ba2`
+- **Files:** 2 (+104/-0)
+- **Duration:** 275ss
+- **Approach:** All six security headers (Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, X-XSS-Protection) were already present in nginx.conf from WO-086, applied at server-block level with 'always' and repeated in the static-assets location block to handle Nginx's add_header scoping rule. The only outstanding requirement was client_max_body_size 2m (AC7), which was added to the server block with a comment explaining the sizing rationale. Created scripts/verify-security-headers.sh as a lightweight curl-based verification script that assumes the Docker Compose environment is already running; it checks all six required headers via curl -sI against localhost:5173 and tests that a 3 MB POST returns a 4xx response.
