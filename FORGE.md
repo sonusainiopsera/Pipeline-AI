@@ -574,3 +574,10 @@
 - **Files:** 2 (+112/-2)
 - **Duration:** 248ss
 - **Approach:** WebConfig.java already had allowCredentials(true), allowedOrigins from property, allowedMethods, and partial allowedHeaders. Three changes were needed: (1) remove 'Authorization' from allowedHeaders — cookie-based auth doesn't require it cross-origin per AC3; (2) add exposedHeaders('Set-Cookie') so browsers can access cookie-setting response headers; (3) add maxAge(3600) for preflight cache. SecurityConfig already delegates CORS to WebConfig via cors(Customizer.withDefaults()) in both filter chains — no changes needed. CorsConfigTest added using @WebMvcTest(AuthController.class) to verify preflight returns correct headers, credentials flag, maxAge, and that disallowed origins receive no CORS headers.
+
+## WO-037: User Story: WO-037 - Add Auth Integration Tests End-to-End Suite
+- **Status:** completed
+- **Commit:** `cbd0058`
+- **Files:** 2 (+468/-0)
+- **Duration:** 650ss
+- **Approach:** Testcontainers dependencies (postgresql + junit-jupiter) were already present in pom.xml. Created application-auth-it.yml with 5-second access token / 60-second refresh token expiry (for the expired-token test) and scheduler disabled. Created AuthIntegrationTest using @SpringBootTest(RANDOM_PORT) + @Testcontainers with a static PostgreSQLContainer and @DynamicPropertySource for datasource properties. @MockBean EmailService is no-op so verification tokens are read directly from UserRepository after registration. Cookie handling is done manually by parsing Set-Cookie response headers and injecting Cookie request headers via HttpEntity. MFA enrollment test extracts the TOTP secret from the qrCodeUri and uses DefaultCodeGenerator to generate a valid code. KB_ADMIN RBAC is tested by elevating a registered user's role via UserRepository before logging in.

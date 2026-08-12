@@ -1,0 +1,7 @@
+jwt:
+  access-token-expiration: 5
+  refresh-token-expiration: 60
+
+app:
+  scheduler:
+    enabled: false
