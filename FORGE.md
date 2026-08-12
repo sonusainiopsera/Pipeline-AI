@@ -567,3 +567,10 @@
 - **Files:** 6 (+472/-13)
 - **Duration:** 725ss
 - **Approach:** The audit infrastructure (AuditLog entity, AuditService, AuditLogRepository, DB migration V2) already existed. This WO adds: (1) IpAddressUtil utility checking X-Forwarded-For then X-Real-IP then getRemoteAddr(); (2) public static final constants for 8 auth action names and 2 resource types on AuditService; (3) AuditService.resolveClientIp() refactored to delegate to IpAddressUtil (adds X-Real-IP support); (4) findByResourceTypeAndCreatedAtBetween added to AuditLogRepository; (5) AuditService injected into AuthService via @RequiredArgsConstructor with 13 logEvent call-sites covering all 8 required event types, each wrapped in try-catch to prevent audit failures from affecting primary auth flows.
+
+## WO-036: User Story: WO-036 - Update CORS Configuration for Cookie Authentication
+- **Status:** completed
+- **Commit:** `7463fde`
+- **Files:** 2 (+112/-2)
+- **Duration:** 248ss
+- **Approach:** WebConfig.java already had allowCredentials(true), allowedOrigins from property, allowedMethods, and partial allowedHeaders. Three changes were needed: (1) remove 'Authorization' from allowedHeaders — cookie-based auth doesn't require it cross-origin per AC3; (2) add exposedHeaders('Set-Cookie') so browsers can access cookie-setting response headers; (3) add maxAge(3600) for preflight cache. SecurityConfig already delegates CORS to WebConfig via cors(Customizer.withDefaults()) in both filter chains — no changes needed. CorsConfigTest added using @WebMvcTest(AuthController.class) to verify preflight returns correct headers, credentials flag, maxAge, and that disallowed origins receive no CORS headers.
