@@ -3,6 +3,8 @@ package com.opsera.pipelineassistant.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.pipelineassistant.dto.ErrorRequest;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
+import com.opsera.pipelineassistant.security.CustomUserDetailsService;
+import com.opsera.pipelineassistant.security.JwtTokenProvider;
 import com.opsera.pipelineassistant.service.KnowledgeBaseService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,12 @@ class ErrorControllerTest {
 
     @MockBean
     private KnowledgeBaseService knowledgeBaseService;
+
+    @MockBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private CustomUserDetailsService customUserDetailsService;
 
     private ErrorKnowledgeBase buildEntity(Long id, String errorPattern, String category,
                                             String rootCause, String solution, String severity) {

@@ -3,6 +3,8 @@ package com.opsera.pipelineassistant.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.pipelineassistant.dto.Responses.HistoryListDTO;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
+import com.opsera.pipelineassistant.security.CustomUserDetailsService;
+import com.opsera.pipelineassistant.security.JwtTokenProvider;
 import com.opsera.pipelineassistant.service.AnalysisService;
 import com.opsera.pipelineassistant.service.DashboardService;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,12 @@ class AnalysisControllerTest {
 
     @MockBean
     private DashboardService dashboardService;
+
+    @MockBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private CustomUserDetailsService customUserDetailsService;
 
     // ─── POST /api/analyze ──────────────────────────────────────────────────────
 
