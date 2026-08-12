@@ -3,6 +3,10 @@ version: '3.8'
 # All sensitive values are loaded from a .env file in this directory.
 # Copy .env.example to .env and fill in real values before running.
 # Variables marked :? will cause docker compose to fail fast if not set.
+#
+# Observability stack (Prometheus, Grafana, Loki, Promtail) is gated behind the
+# 'observability' profile.  Start it with:
+#   docker compose --profile observability up
 
 services:
   backend:
@@ -20,6 +24,8 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - pipeline-net
 
   frontend:
     build:
@@ -31,6 +37,8 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - pipeline-net
 
   db:
     image: postgres:16-alpine
@@ -47,6 +55,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - pipeline-net
 
   backup:
     build:
@@ -65,7 +75,97 @@ services:
     volumes:
       - backup_data:/backups
     restart: unless-stopped
+    networks:
+      - pipeline-net
+
+  # ── Observability stack ──────────────────────────────────────────────────────
+  # Start with: docker compose --profile observability up
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    profiles: ['observability']
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - pipeline-net
+
+  loki:
+    image: grafana/loki:3.1.0
+    profiles: ['observability']
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - pipeline-net
+
+  promtail:
+    image: grafana/promtail:3.1.0
+    profiles: ['observability']
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9080/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - pipeline-net
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    profiles: ['observability']
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
+    depends_on:
+      - prometheus
+      - loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - pipeline-net
+
+networks:
+  pipeline-net:
+    driver: bridge
 
 volumes:
   postgres_data:
   backup_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:

@@ -266,3 +266,10 @@
 - **Files:** 4 (+150/-34)
 - **Duration:** 605ss
 - **Approach:** Completed the three-part refactoring: (1) ScoredMatch record gained a totalPatterns field so PatternMatcher computes both match count and keyword count in one pass — eliminating the caller's re-parsing of errorPattern with a different split regex; (2) PatternMatcher.scoreEntry() now returns ScoredMatch directly, counting only non-blank keywords to maintain consistency between matchCount and totalPatterns; (3) AnalysisService.analyze() refactored to a clean linear pipeline — fetch KB entries, match via PatternMatcher, select best via stream reduce with strict > (preserving first-wins tie-breaking), delegate confidence to ScoringEngine and templating to ResponseTemplater, build and persist entity. No business logic remains in AnalysisService. Added AnalysisServiceIntegrationTest using MockMvc to exercise the full pipeline end-to-end for all 6 seed patterns plus the unclassified path.
+
+## WO-061: User Story: WO-061 - Add Prometheus Grafana Loki Docker Compose Services
+- **Status:** completed
+- **Commit:** `09c3eba`
+- **Files:** 6 (+199/-0)
+- **Duration:** 194ss
+- **Approach:** Added an explicit pipeline-net bridge network to docker-compose.yml and attached all existing services to it. Added 4 observability services (prometheus, loki, promtail, grafana) behind the 'observability' Docker Compose profile so plain 'docker compose up' starts only the original services unchanged. Created all required config files: prometheus.yml with 15s scrape interval targeting backend:8080/actuator/prometheus; loki-config.yml with filesystem backend and 168h retention; promtail-config.yml with docker_sd_configs via Docker socket, relabeling for container_name/service_name, and JSON pipeline stages; Grafana provisioning files auto-configuring Prometheus and Loki data sources. Added prometheus_data, grafana_data, and loki_data named volumes. All 4 observability services have health checks (wget --spider), restart: unless-stopped, and appropriate depends_on ordering (prometheus→backend, promtail→loki healthy, grafana→prometheus+loki).
