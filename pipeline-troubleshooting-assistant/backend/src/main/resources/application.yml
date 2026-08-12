@@ -45,6 +45,10 @@ analysis:
     template: "We have identified the root cause of your pipeline failure as: {rootCause}. We recommend the following action: {suggestedFix}"
     unclassified-message: "We are investigating the pipeline failure and will provide an update shortly."
 
+cache:
+  knowledge-base:
+    ttl-minutes: 10
+
 management:
   endpoints:
     web:

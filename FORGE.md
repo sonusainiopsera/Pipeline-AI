@@ -294,3 +294,10 @@
 - **Files:** 0 (+0/-0)
 - **Duration:** 263ss
 - **Approach:** WO-047 required establishing golden-file test infrastructure before the analysis service decomposition. All required artifacts were already implemented by earlier WOs in the batch: WO-001 created the test infrastructure (application-test.yml, pom.xml dependencies), WO-002 created GoldenFileAnalysisTest.java and all six golden files plus fixture log samples, and WO-043 through WO-046 kept the test class up-to-date as the analysis pipeline was refactored. The working tree is clean — no new files were needed. The existing GoldenFileAnalysisTest.java covers all 7 test cases (6 seed patterns + unclassified) with field-by-field assertion against golden JSON files. application-test.yml uses H2 in PostgreSQL compatibility mode. All test dependencies (spring-boot-starter-test, h2 test scope, testcontainers postgresql and junit-jupiter) are present in pom.xml.
+
+## WO-048: User Story: WO-048 - Integrate Caffeine Cache for Knowledge Base Queries
+- **Status:** completed
+- **Commit:** `8a92153`
+- **Files:** 10 (+301/-25)
+- **Duration:** 465ss
+- **Approach:** Added Caffeine in-process caching for the knowledge base query path. CacheConfig registers a CaffeineCacheManager with a 'knowledgeBase' cache (max 1000 entries, TTL from configurable property). KnowledgeBaseService.getAllEntries() is the @Cacheable cache boundary — AnalysisService calls through this bean (different Spring proxy) to avoid the self-invocation trap. CRUD mutators carry @CacheEvict(allEntries=true) to ensure stale entries are never served after writes. AnalysisServiceTest and GoldenFileAnalysisTest were updated to mock KnowledgeBaseService instead of ErrorRepository.

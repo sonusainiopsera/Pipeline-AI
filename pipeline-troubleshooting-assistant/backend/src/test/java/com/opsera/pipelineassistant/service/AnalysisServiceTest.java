@@ -8,7 +8,6 @@ import com.opsera.pipelineassistant.analysis.ScoringProperties;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
-import com.opsera.pipelineassistant.repository.ErrorRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +29,7 @@ import static org.mockito.Mockito.*;
 class AnalysisServiceTest {
 
     @Mock
-    private ErrorRepository errorRepository;
+    private KnowledgeBaseService knowledgeBaseService;
 
     @Mock
     private AnalyzedLogRepository analyzedLogRepository;
@@ -81,7 +80,7 @@ class AnalysisServiceTest {
     // ── 1. Empty knowledge base ──────────────────────────────────────────────
     @Test
     void shouldReturnUnclassifiedWhenKnowledgeBaseIsEmpty() {
-        when(errorRepository.findAll()).thenReturn(Collections.emptyList());
+        when(knowledgeBaseService.getAllEntries()).thenReturn(Collections.emptyList());
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("some log text with no matching patterns");
@@ -99,7 +98,7 @@ class AnalysisServiceTest {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 "OutOfMemoryError,heap space,java.lang",
                 "Memory", "Heap space exhausted", "Increase -Xmx", "HIGH");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("outofmemoryerror heap space java.lang detected");
@@ -115,7 +114,7 @@ class AnalysisServiceTest {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 "alpha,beta,gamma,delta",
                 "Network", "Network failure", "Check connectivity", "HIGH");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("alpha and beta are present but not the rest");
@@ -134,7 +133,7 @@ class AnalysisServiceTest {
                 "xyz,uvw", "Category-None", "None cause", "None fix", "LOW");
 
         // Log matches 1 keyword from lowScore and all 3 from highScore
-        when(errorRepository.findAll()).thenReturn(List.of(lowScore, highScore, noMatch));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(lowScore, highScore, noMatch));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("token1 alpha beta gamma unrelated");
@@ -148,7 +147,7 @@ class AnalysisServiceTest {
     void shouldCapConfidenceAt98() {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 "error", "Errors", "An error occurred", "Fix the error", "MEDIUM");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("error in pipeline");
@@ -163,7 +162,7 @@ class AnalysisServiceTest {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 "OUTOFMEMORY,HEAP",
                 "Memory", "OOM detected", "Increase heap", "HIGH");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("outofmemory heap error encountered");
@@ -179,7 +178,7 @@ class AnalysisServiceTest {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 " alpha , beta , gamma ",
                 "Network", "Network issue", "Fix network", "HIGH");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("alpha beta gamma detected in log");
@@ -194,7 +193,7 @@ class AnalysisServiceTest {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 "keyword",
                 "TestCategory", "The specific root cause", "The specific recommended fix", "HIGH");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("keyword found in pipeline log");
@@ -209,7 +208,7 @@ class AnalysisServiceTest {
     void shouldPersistAnalyzedLog() {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 "docker,build", "Docker", "Docker build failed", "Fix Dockerfile", "HIGH");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         ArgumentCaptor<AnalyzedLog> captor = ArgumentCaptor.forClass(AnalyzedLog.class);
         when(analyzedLogRepository.save(captor.capture()))
                 .thenReturn(AnalyzedLog.builder().build());
@@ -230,7 +229,7 @@ class AnalysisServiceTest {
     void shouldReturnUnclassifiedWhenNoKeywordsMatchInSingleEntry() {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 "xyz,uvw,pqr", "Network", "Network issue", "Fix network", "HIGH");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("completely unrelated log message here");
@@ -246,7 +245,7 @@ class AnalysisServiceTest {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 "timeout",
                 "Timeout", "Request timed out", "Increase timeout threshold", "MEDIUM");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("connection timeout occurred during build");
@@ -262,7 +261,7 @@ class AnalysisServiceTest {
         ErrorKnowledgeBase entry = buildKnowledgeBaseEntry(
                 "alpha,beta,gamma",
                 "Network", "Network issue", "Fix network", "HIGH");
-        when(errorRepository.findAll()).thenReturn(List.of(entry));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(entry));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("alpha is present but beta and gamma are not");
@@ -274,7 +273,7 @@ class AnalysisServiceTest {
     // ── 13. Unclassified confidence is 20, not the 55 base ───────────────────
     @Test
     void shouldUseConfidence20ForUnclassifiedNotBase55() {
-        when(errorRepository.findAll()).thenReturn(Collections.emptyList());
+        when(knowledgeBaseService.getAllEntries()).thenReturn(Collections.emptyList());
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("log with no matching patterns");
@@ -291,7 +290,7 @@ class AnalysisServiceTest {
                 "alpha,beta", "First", "First root cause", "First fix", "LOW");
         ErrorKnowledgeBase second = buildKnowledgeBaseEntry(
                 "alpha,beta", "Second", "Second root cause", "Second fix", "HIGH");
-        when(errorRepository.findAll()).thenReturn(List.of(first, second));
+        when(knowledgeBaseService.getAllEntries()).thenReturn(List.of(first, second));
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AnalyzedLog result = analysisService.analyze("alpha beta present in log");
@@ -304,7 +303,7 @@ class AnalysisServiceTest {
     @Test
     void shouldCallLogSanitizerExactlyOnceWithRawInput() {
         String rawInput = "pipeline log with potential secrets";
-        when(errorRepository.findAll()).thenReturn(Collections.emptyList());
+        when(knowledgeBaseService.getAllEntries()).thenReturn(Collections.emptyList());
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         analysisService.analyze(rawInput);
@@ -319,7 +318,7 @@ class AnalysisServiceTest {
         String sanitizedOutput = "pipeline log with [AWS_KEY_REDACTED] secret";
         when(logSanitizer.sanitize(rawLog)).thenReturn(sanitizedOutput);
 
-        when(errorRepository.findAll()).thenReturn(Collections.emptyList());
+        when(knowledgeBaseService.getAllEntries()).thenReturn(Collections.emptyList());
         ArgumentCaptor<AnalyzedLog> captor = ArgumentCaptor.forClass(AnalyzedLog.class);
         when(analyzedLogRepository.save(captor.capture())).thenReturn(AnalyzedLog.builder().build());
 

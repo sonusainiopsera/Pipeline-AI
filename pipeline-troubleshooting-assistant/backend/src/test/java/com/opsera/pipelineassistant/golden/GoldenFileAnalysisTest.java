@@ -8,8 +8,8 @@ import com.opsera.pipelineassistant.analysis.ScoringProperties;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
-import com.opsera.pipelineassistant.repository.ErrorRepository;
 import com.opsera.pipelineassistant.service.AnalysisService;
+import com.opsera.pipelineassistant.service.KnowledgeBaseService;
 import com.opsera.pipelineassistant.service.LogSanitizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,7 +45,7 @@ import static org.mockito.Mockito.when;
 class GoldenFileAnalysisTest {
 
     @Mock
-    private ErrorRepository errorRepository;
+    private KnowledgeBaseService knowledgeBaseService;
 
     @Mock
     private AnalyzedLogRepository analyzedLogRepository;
@@ -79,7 +79,7 @@ class GoldenFileAnalysisTest {
         // Pass-through sanitizer — does not alter log text, keeping golden values stable
         lenient().when(logSanitizer.sanitize(anyString())).thenAnswer(inv -> inv.getArgument(0));
         // Return all 6 seed entries so the service can score against the full knowledge base
-        when(errorRepository.findAll()).thenReturn(SEED_ENTRIES);
+        when(knowledgeBaseService.getAllEntries()).thenReturn(SEED_ENTRIES);
         // Return the entity unchanged from save so the test can inspect computed fields
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }

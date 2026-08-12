@@ -7,7 +7,6 @@ import com.opsera.pipelineassistant.analysis.ScoringEngine;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
-import com.opsera.pipelineassistant.repository.ErrorRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -21,7 +20,7 @@ import java.util.List;
 @Slf4j
 public class AnalysisService {
 
-    private final ErrorRepository errorRepository;
+    private final KnowledgeBaseService knowledgeBaseService;
     private final AnalyzedLogRepository analyzedLogRepository;
     private final LogSanitizer logSanitizer;
     private final PatternMatcher patternMatcher;
@@ -42,8 +41,8 @@ public class AnalysisService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Analysis failed. Please try again.");
         }
 
-        // 1. Fetch knowledge base entries
-        List<ErrorKnowledgeBase> entries = errorRepository.findAll();
+        // 1. Fetch knowledge base entries — served from Caffeine cache after first call
+        List<ErrorKnowledgeBase> entries = knowledgeBaseService.getAllEntries();
 
         // 2. Score each entry against the sanitized log
         List<ScoredMatch> scored = patternMatcher.match(sanitizedLog, entries);
