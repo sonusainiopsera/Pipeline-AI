@@ -3,6 +3,8 @@ package com.opsera.pipelineassistant.repository;
 import com.opsera.pipelineassistant.model.AuditLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,5 +23,6 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     @Modifying
     @Transactional
-    void deleteByCreatedAtBefore(LocalDateTime cutoff);
+    @Query("DELETE FROM AuditLog a WHERE a.createdAt < :cutoff")
+    int deleteByCreatedAtBefore(@Param("cutoff") LocalDateTime cutoff);
 }

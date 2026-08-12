@@ -61,6 +61,12 @@ jwt:
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:86400}
 
+retention:
+  # Retention period for analyzed_logs: records older than this are purged daily at 02:00 UTC.
+  analyzed-logs-days: 90
+  # Retention period for audit_logs: records older than this are purged in the same daily run.
+  audit-logs-days: 365
+
 management:
   endpoints:
     web:
