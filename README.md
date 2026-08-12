@@ -110,6 +110,20 @@ mvn verify
 
 The JaCoCo coverage report is generated at `target/site/jacoco/index.html`.
 
+## Backup and Recovery
+
+The application runs a `backup` sidecar container that takes nightly `pg_dump` snapshots of the PostgreSQL database (default: 02:00 UTC). Backups are stored on the `backup_data` Docker volume (retained 30 days) and optionally pushed to S3-compatible off-site storage (retained 90 days). A weekly verify-restore job restores the latest backup to a temporary database and checks row counts to confirm integrity.
+
+- **RPO:** 24 hours (nightly backup cadence)
+- **RTO:** 30 minutes (validated quarterly drill)
+
+For full restore procedures, environment variable reference, troubleshooting, and escalation contacts, see the runbook. To schedule and track quarterly RTO drills, use the drill template.
+
+| Document | Description |
+|----------|-------------|
+| [Backup and Restore Runbook](docs/backup-restore-runbook.md) | Step-by-step restore procedures for all disaster scenarios, environment variable reference, and troubleshooting guide |
+| [RTO Validation Drill](docs/rto-validation-drill.md) | Quarterly drill template with timing checkpoints, pass/fail criteria, results template, and example execution |
+
 ## Documentation
 
 | Document | Description |

@@ -203,3 +203,10 @@
 - **Files:** 8 (+310/-2)
 - **Duration:** 500ss
 - **Approach:** Extracted the hardcoded confidence scoring formula from AnalysisService.analyze() into a dedicated ScoringEngine Spring @Service bean. Created a ScoringProperties @ConfigurationProperties class binding the analysis.scoring prefix with fields baseConfidence (55), scalingFactor (43), maxConfidence (98), and unclassifiedConfidence (20). ScoringEngine validates its properties on construction (fail-fast) and delegates calculateConfidence(matchCount, totalPatterns) to the externalized formula. AnalysisService now injects ScoringEngine via @RequiredArgsConstructor and delegates both the matched and unclassified confidence paths to it. Existing tests were updated to use @Spy with an initialized ScoringEngine instance to provide real scoring behavior under Mockito @InjectMocks.
+
+## WO-071: User Story: WO-071 - Backup Runbook and RTO Validation Drill
+- **Status:** completed
+- **Commit:** `cdad05e`
+- **Files:** 3 (+870/-0)
+- **Duration:** 363ss
+- **Approach:** Created two documentation files in the existing docs/ directory and updated the root README.md. The runbook covers all 11 required sections: architecture overview with a text-based data-flow diagram, backup schedule and retention policies, prerequisites with a full environment variable table (matching .env.example and backup script requirements), manual backup trigger with expected JSON output, restore from local backup in 6 numbered steps, restore from off-site (S3) using aws s3 cp, partial table restore using pg_restore --table, fresh environment bootstrap including Flyway migration behavior, verification SQL queries, a troubleshooting table with 7 failure scenarios, and an escalation placeholder. The drill template covers purpose/frequency, prerequisites checklist, 7 timing checkpoints (T+0 through T+30) with exact copy-pasteable commands, a pass/fail criteria matrix, results recording template, 10 post-drill review questions, remediation tracking with severity levels, and a fully executed example drill showing 11-minute completion against the 30-minute RTO target.
