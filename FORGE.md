@@ -42,3 +42,10 @@
 - **Files:** 5 (+73/-10)
 - **Duration:** 289ss
 - **Approach:** Externalized all database and CORS credentials from version-controlled files into a git-ignored .env file. Created .env.example with placeholder values as the onboarding template. Used Docker Compose required-variable syntax (${VAR:?error}) for the six sensitive credential variables so startup fails fast and explicitly if .env is missing. Used safe fallback (localdev) in application.yml defaults to clearly distinguish local-dev defaults from production values. Added a project-level .gitignore as a belt-and-suspenders guard on top of the root .gitignore.
+
+## WO-039: User Story: WO-039 - Integrate LogSanitizer into Analysis Pipeline Before Persistence
+- **Status:** completed
+- **Commit:** `85f4871`
+- **Files:** 4 (+174/-2)
+- **Duration:** 675ss
+- **Approach:** Created LogSanitizer as a new @Service with compiled regex patterns for AWS access keys (AKIA[0-9A-Z]{16}), Bearer tokens (Bearer\s+[A-Za-z0-9\-_.]+), and password assignments ((?i)(password|passwd|secret)=\S+). Added LogSanitizer as a final field in AnalysisService — @RequiredArgsConstructor auto-generates the three-arg constructor. In analyze(), the sanitize() call is the first operation, wrapped in a try-catch that throws ResponseStatusException(500) on failure to prevent any raw log from reaching downstream processing. All uses of rawLog replaced with sanitizedLog for both pattern matching and entity construction. AnalysisServiceTest updated with @Mock LogSanitizer, a lenient @BeforeEach pass-through stub so existing 14 tests are unaffected, and 2 new tests verifying the integration contract. AnalysisIntegrationTest uses @SpringBootTest + H2 to verify end-to-end sanitization: submits a log with embedded secrets and asserts neither the DB record nor the history endpoint response contains raw secret values.

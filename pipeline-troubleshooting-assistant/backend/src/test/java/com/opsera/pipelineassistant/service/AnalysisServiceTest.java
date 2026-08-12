@@ -4,6 +4,7 @@ import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
 import com.opsera.pipelineassistant.repository.ErrorRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -16,6 +17,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,8 +29,18 @@ class AnalysisServiceTest {
     @Mock
     private AnalyzedLogRepository analyzedLogRepository;
 
+    @Mock
+    private LogSanitizer logSanitizer;
+
     @InjectMocks
     private AnalysisService analysisService;
+
+    @BeforeEach
+    void setUp() {
+        // Pass-through stub — existing tests are unaffected; sanitize returns the input unchanged.
+        // lenient() prevents UnnecessaryStubbingException when tests also register specific stubs.
+        lenient().when(logSanitizer.sanitize(anyString())).thenAnswer(inv -> inv.getArgument(0));
+    }
 
     private ErrorKnowledgeBase buildKnowledgeBaseEntry(String errorPattern,
                                                         String category,
@@ -265,5 +277,34 @@ class AnalysisServiceTest {
 
         // Both score 2; strict > means the first entry retains best-match status on ties
         assertThat(result.getCategory()).isEqualTo("First");
+    }
+
+    // ── 15. LogSanitizer is called exactly once with the raw input ────────────
+    @Test
+    void shouldCallLogSanitizerExactlyOnceWithRawInput() {
+        String rawInput = "pipeline log with potential secrets";
+        when(errorRepository.findAll()).thenReturn(Collections.emptyList());
+        when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        analysisService.analyze(rawInput);
+
+        verify(logSanitizer, times(1)).sanitize(rawInput);
+    }
+
+    // ── 16. Sanitized text (not raw) is persisted to the database ─────────────
+    @Test
+    void shouldPersistSanitizedTextNotRawLog() {
+        String rawLog = "pipeline log with AKIAIOSFODNN7EXAMPLE secret";
+        String sanitizedOutput = "pipeline log with [AWS_KEY_REDACTED] secret";
+        when(logSanitizer.sanitize(rawLog)).thenReturn(sanitizedOutput);
+
+        when(errorRepository.findAll()).thenReturn(Collections.emptyList());
+        ArgumentCaptor<AnalyzedLog> captor = ArgumentCaptor.forClass(AnalyzedLog.class);
+        when(analyzedLogRepository.save(captor.capture())).thenReturn(AnalyzedLog.builder().build());
+
+        analysisService.analyze(rawLog);
+
+        assertThat(captor.getValue().getLogText()).isEqualTo(sanitizedOutput);
+        assertThat(captor.getValue().getLogText()).isNotEqualTo(rawLog);
     }
 }
