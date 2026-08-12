@@ -64,8 +64,9 @@ class FlywayBaselineMigrationTest {
                 "SELECT COUNT(*) FROM information_schema.columns "
                         + "WHERE table_schema = 'public' AND table_name = 'analyzed_logs'",
                 Integer.class);
-        // id, log_text, category, root_cause, suggested_fix, customer_update, severity, confidence, created_at
-        assertThat(columnCount).isEqualTo(9);
+        // V1: id, log_text, category, root_cause, suggested_fix, customer_update, severity, confidence, created_at
+        // V2: + user_id → 10 columns total
+        assertThat(columnCount).isEqualTo(10);
     }
 
     // ── Column type spot-checks ────────────────────────────────────────────────
@@ -100,6 +101,60 @@ class FlywayBaselineMigrationTest {
         assertThat(rowCount).isEqualTo(6);
     }
 
+    // ── V2 table existence and column counts ──────────────────────────────────
+
+    @Test
+    void usersTableExistsWithCorrectColumnCount() {
+        Integer columnCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = 'users'",
+                Integer.class);
+        // id, email, password_hash, display_name, role, mfa_secret, mfa_enabled,
+        // email_verified, verification_token, verification_token_expiry,
+        // failed_login_attempts, locked_until, created_at, updated_at
+        assertThat(columnCount).isEqualTo(14);
+    }
+
+    @Test
+    void refreshTokensTableExistsWithCorrectColumnCount() {
+        Integer columnCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = 'refresh_tokens'",
+                Integer.class);
+        // id, user_id, token_hash, expires_at, created_at
+        assertThat(columnCount).isEqualTo(5);
+    }
+
+    @Test
+    void auditLogsTableExistsWithCorrectColumnCount() {
+        Integer columnCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = 'audit_logs'",
+                Integer.class);
+        // id, actor_id, actor_email, action, resource_type, resource_id, details, ip_address, created_at
+        assertThat(columnCount).isEqualTo(9);
+    }
+
+    @Test
+    void analyzedLogsUserIdColumnIsUuid() {
+        String dataType = jdbcTemplate.queryForObject(
+                "SELECT data_type FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = 'analyzed_logs' "
+                        + "AND column_name = 'user_id'",
+                String.class);
+        assertThat(dataType).isEqualTo("uuid");
+    }
+
+    @Test
+    void usersTableHasRoleCheckConstraint() {
+        Integer constraintCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.table_constraints "
+                        + "WHERE table_schema = 'public' AND table_name = 'users' "
+                        + "AND constraint_type = 'CHECK'",
+                Integer.class);
+        assertThat(constraintCount).isGreaterThanOrEqualTo(1);
+    }
+
     // ── Flyway history ────────────────────────────────────────────────────────
 
     @Test
@@ -109,5 +164,14 @@ class FlywayBaselineMigrationTest {
                         + "WHERE version = '1' AND success = true",
                 Integer.class);
         assertThat(v1Count).isEqualTo(1);
+    }
+
+    @Test
+    void flywayHistoryRecordsV2AsApplied() {
+        Integer v2Count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM flyway_schema_history "
+                        + "WHERE version = '2' AND success = true",
+                Integer.class);
+        assertThat(v2Count).isEqualTo(1);
     }
 }

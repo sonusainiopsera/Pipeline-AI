@@ -280,3 +280,17 @@
 - **Files:** 2 (+97/-0)
 - **Duration:** 227ss
 - **Approach:** Added tags: ['v*'] to the workflow push trigger to enable tag-based release builds. Added a 'publish' job gated behind needs: [backend, frontend] (test-gate) and a job-level if condition that limits execution to push events on main or v* tag events — pull request runs skip the job entirely. Buildx setup enables BuildKit + GitHub Actions cache backend. docker/login-action authenticates to ghcr.io using GITHUB_TOKEN (packages:write permission on the job). docker/metadata-action generates sha, branch, semver, and latest tags (latest only on is_default_branch) plus OCI image labels (source, revision, created) automatically. docker/build-push-action builds and pushes both backend and frontend with scoped GHA cache. Frontend receives VITE_API_URL=/api as a build arg for production reverse-proxy use. Created docker-compose.prod.yml as a Compose override that swaps build: for image: directives pointing to the registry, supporting REGISTRY_OWNER, BACKEND_IMAGE_TAG, and FRONTEND_IMAGE_TAG env vars for rollback and environment targeting.
+
+## WO-015: User Story: WO-015 - Create V2 Migration for Users Table
+- **Status:** completed
+- **Commit:** `3fc20e0`
+- **Files:** 9 (+340/-2)
+- **Duration:** 413ss
+- **Approach:** Created the V2 SQL migration with all three new tables and the analyzed_logs alteration. Placed JPA entities in the model package (consistent with existing AnalyzedLog and ErrorKnowledgeBase) rather than a new entity package. User uses @GeneratedValue(UUID) for application-layer UUID generation (the DB DEFAULT gen_random_uuid() acts as fallback). AuditLog uses @JdbcTypeCode(SqlTypes.JSON) + @Column(columnDefinition='jsonb') for the JSONB details column to ensure Hibernate correctly maps the type during ddl-auto validate. AnalyzedLog received a nullable @ManyToOne(LAZY) user field. FlywayBaselineMigrationTest was updated to fix the analyzed_logs column count (9→10) and extended with five new V2 tests covering table existence, column counts, the UUID type of analyzed_logs.user_id, role CHECK constraint presence, and Flyway history V2 applied status.
+
+## WO-047: User Story: WO-047 - Golden-File Tests for Analysis Scoring Baseline
+- **Status:** completed
+- **Commit:** `2a93bf5`
+- **Files:** 0 (+0/-0)
+- **Duration:** 263ss
+- **Approach:** WO-047 required establishing golden-file test infrastructure before the analysis service decomposition. All required artifacts were already implemented by earlier WOs in the batch: WO-001 created the test infrastructure (application-test.yml, pom.xml dependencies), WO-002 created GoldenFileAnalysisTest.java and all six golden files plus fixture log samples, and WO-043 through WO-046 kept the test class up-to-date as the analysis pipeline was refactored. The working tree is clean — no new files were needed. The existing GoldenFileAnalysisTest.java covers all 7 test cases (6 seed patterns + unclassified) with field-by-field assertion against golden JSON files. application-test.yml uses H2 in PostgreSQL compatibility mode. All test dependencies (spring-boot-starter-test, h2 test scope, testcontainers postgresql and junit-jupiter) are present in pom.xml.
