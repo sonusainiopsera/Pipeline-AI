@@ -4,6 +4,7 @@ import com.opsera.pipelineassistant.analysis.PatternMatcher;
 import com.opsera.pipelineassistant.analysis.ResponseTemplater;
 import com.opsera.pipelineassistant.analysis.ScoredMatch;
 import com.opsera.pipelineassistant.analysis.ScoringEngine;
+import com.opsera.pipelineassistant.audit.AuditService;
 import com.opsera.pipelineassistant.dto.Responses.HistoryDetailDTO;
 import com.opsera.pipelineassistant.dto.Responses.HistoryListDTO;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
@@ -21,7 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,7 @@ public class AnalysisService {
     private final ScoringEngine scoringEngine;
     private final ResponseTemplater responseTemplater;
     private final MeterRegistry meterRegistry;
+    private final AuditService auditService;
 
     public AnalyzedLog analyze(String logText) {
         log.info("Starting analysis, logTextLength={}", logText != null ? logText.length() : 0);
@@ -114,7 +118,17 @@ public class AnalysisService {
             }
 
             log.info("Analysis complete, category={}, confidence={}", category, confidence);
-            return analyzedLogRepository.save(result);
+            AnalyzedLog saved = analyzedLogRepository.save(result);
+            try {
+                Map<String, Object> auditDetails = new HashMap<>();
+                auditDetails.put("category", saved.getCategory());
+                auditDetails.put("confidence", saved.getConfidence());
+                auditDetails.put("severity", saved.getSeverity());
+                auditService.logEvent("ANALYZE", "ANALYSIS", String.valueOf(saved.getId()), auditDetails);
+            } catch (Exception auditEx) {
+                log.warn("Failed to record audit event for analysis id={}: {}", saved.getId(), auditEx.getMessage());
+            }
+            return saved;
         } finally {
             // Always record latency even when an exception propagates
             try {
