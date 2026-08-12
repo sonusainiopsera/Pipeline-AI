@@ -1,7 +1,10 @@
 package com.opsera.pipelineassistant.controller;
 
+import com.opsera.pipelineassistant.dto.LoginRequest;
 import com.opsera.pipelineassistant.dto.RegisterRequest;
 import com.opsera.pipelineassistant.dto.ResendVerificationRequest;
+import com.opsera.pipelineassistant.dto.Responses.LoginResponse;
+import com.opsera.pipelineassistant.dto.Responses.LoginResult;
 import com.opsera.pipelineassistant.dto.Responses.RefreshResult;
 import com.opsera.pipelineassistant.dto.Responses.RegisterResponse;
 import com.opsera.pipelineassistant.service.AuthService;
@@ -31,6 +34,20 @@ public class AuthController {
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationSeconds;
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        log.info("POST /api/auth/login");
+        LoginResult result = authService.login(request.getEmail(), request.getPassword());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE,
+                        buildCookie("access_token", result.accessToken(),
+                                Duration.ofSeconds(accessTokenExpirationSeconds)).toString())
+                .header(HttpHeaders.SET_COOKIE,
+                        buildCookie("refresh_token", result.rawRefreshToken(),
+                                Duration.ofSeconds(refreshTokenExpirationSeconds), "/api/auth").toString())
+                .body(result.profile());
+    }
 
     @PostMapping("/refresh")
     public ResponseEntity<Map<String, String>> refresh(
@@ -89,12 +106,16 @@ public class AuthController {
     }
 
     private ResponseCookie buildCookie(String name, String value, Duration maxAge) {
+        return buildCookie(name, value, maxAge, "/api");
+    }
+
+    private ResponseCookie buildCookie(String name, String value, Duration maxAge, String path) {
         return ResponseCookie.from(name, value)
                 .maxAge(maxAge)
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("Strict")
-                .path("/api")
+                .path(path)
                 .build();
     }
 

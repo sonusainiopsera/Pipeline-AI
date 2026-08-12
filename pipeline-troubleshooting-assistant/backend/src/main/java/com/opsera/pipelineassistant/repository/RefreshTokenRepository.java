@@ -26,6 +26,8 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     @Modifying
     void deleteByUserId(UUID userId);
 
+    Optional<RefreshToken> findFirstByUserIdOrderByCreatedAtAsc(UUID userId);
+
     long countByExpiresAtBefore(LocalDateTime cutoff);
 
     @Transactional

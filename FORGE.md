@@ -504,3 +504,10 @@
 - **Files:** 7 (+669/-90)
 - **Duration:** 294ss
 - **Approach:** Refactored api.ts to use a central request<T>() helper that adds credentials:'include' to every fetch call. Implemented a 401 interceptor with isRefreshing flag and refreshQueue array: on 401, one refresh attempt is made; concurrent requests queue and wait for the result; success drains the queue with retries, failure drains with rejections and redirects to /login. Auth endpoints are excluded from the refresh loop. Added type-safe auth functions (login, register, verifyEmail, logout, refreshToken, mfaSetup, mfaVerify, mfaChallenge, mfaRecover, getMe). Created AuthContext with user/isAuthenticated/isLoading state and AuthProvider that calls checkAuth on mount. Added ProtectedRoute and wrapped App with AuthProvider.
+
+## WO-024: User Story: WO-024 - Implement JWT Login Endpoint with Cookies
+- **Status:** completed
+- **Commit:** `8baf44e`
+- **Files:** 11 (+658/-1)
+- **Duration:** 611ss
+- **Approach:** Added AuthService.login() implementing the full login flow: email normalization, emailVerified check (EmailNotVerifiedException/403), lockedUntil check with expired-lock cleanup (AccountLockedException/423), BCrypt password verification, failedLoginAttempts increment/reset, lockedUntil set after 5th failure, session limit enforcement via countByUserId + findFirstByUserIdOrderByCreatedAtAsc (delete oldest when >= 3), token generation and refresh token hash storage. AuthController POST /login calls login() and sets access_token (Path=/api, Max-Age=900) and refresh_token (Path=/api/auth, Max-Age=604800) as HTTP-only secure SameSite=Strict cookies, returning only the user profile in the response body. Exception handlers for AccountLockedException (423) and EmailNotVerifiedException (403) added to ApiExceptionHandler.

@@ -36,6 +36,30 @@ public class ApiExceptionHandler {
      * to signal that the submitted content exceeds the application's ingest limit.
      * All other validation failures return HTTP 400 with field-level error details.
      */
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountLocked(AccountLockedException ex,
+                                                                    HttpServletRequest request) {
+        recordErrorMetric("account_locked");
+        log.warn("Login blocked — account locked: path={}", request.getRequestURI());
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("message", ex.getMessage());
+        body.put("status", 423);
+        return ResponseEntity.status(423).body(body);
+    }
+
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<Map<String, Object>> handleEmailNotVerified(EmailNotVerifiedException ex,
+                                                                       HttpServletRequest request) {
+        recordErrorMetric("email_not_verified");
+        log.warn("Login blocked — email not verified: path={}", request.getRequestURI());
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("message", ex.getMessage());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex,
                                                                  HttpServletRequest request) {

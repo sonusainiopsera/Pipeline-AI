@@ -1,6 +1,10 @@
 package com.opsera.pipelineassistant.service;
 
+import com.opsera.pipelineassistant.dto.Responses.LoginResponse;
+import com.opsera.pipelineassistant.dto.Responses.LoginResult;
 import com.opsera.pipelineassistant.dto.Responses.RefreshResult;
+import com.opsera.pipelineassistant.exception.AccountLockedException;
+import com.opsera.pipelineassistant.exception.EmailNotVerifiedException;
 import com.opsera.pipelineassistant.model.RefreshToken;
 import com.opsera.pipelineassistant.model.User;
 import com.opsera.pipelineassistant.repository.RefreshTokenRepository;
@@ -39,6 +43,64 @@ public class AuthService {
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationSeconds;
+
+    @Transactional
+    public LoginResult login(String email, String password) {
+        String normalizedEmail = email.trim().toLowerCase();
+
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Invalid email or password"));
+
+        if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+            throw new EmailNotVerifiedException("Please verify your email before logging in");
+        }
+
+        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
+            throw new AccountLockedException(
+                    "Account locked due to too many failed attempts. Try again in 15 minutes.");
+        }
+
+        if (user.getLockedUntil() != null && !user.getLockedUntil().isAfter(LocalDateTime.now())) {
+            user.setFailedLoginAttempts(0);
+            user.setLockedUntil(null);
+        }
+
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            int attempts = user.getFailedLoginAttempts() + 1;
+            user.setFailedLoginAttempts(attempts);
+            if (attempts >= 5) {
+                user.setLockedUntil(LocalDateTime.now().plusMinutes(15));
+                log.warn("Account '{}' locked after {} failed login attempts", normalizedEmail, attempts);
+            }
+            userRepository.save(user);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
+
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        userRepository.save(user);
+
+        long sessionCount = refreshTokenRepository.countByUserId(user.getId());
+        if (sessionCount >= 3) {
+            refreshTokenRepository.findFirstByUserIdOrderByCreatedAtAsc(user.getId())
+                    .ifPresent(oldest -> refreshTokenRepository.deleteByTokenHash(oldest.getTokenHash()));
+        }
+
+        String accessToken = jwtTokenProvider.generateAccessToken(user);
+        String rawRefreshToken = jwtTokenProvider.generateRefreshToken();
+        String tokenHash = hashToken(rawRefreshToken);
+
+        refreshTokenRepository.save(RefreshToken.builder()
+                .user(user)
+                .tokenHash(tokenHash)
+                .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpirationSeconds))
+                .build());
+
+        log.info("Login successful for '{}'", normalizedEmail);
+        LoginResponse profile = new LoginResponse(user.getEmail(), user.getDisplayName(), user.getRole().name());
+        return new LoginResult(accessToken, rawRefreshToken, profile);
+    }
 
     @Transactional
     public User register(String email, String password, String displayName) {
