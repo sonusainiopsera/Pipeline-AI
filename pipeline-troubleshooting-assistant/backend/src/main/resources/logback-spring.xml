@@ -4,25 +4,51 @@
     <!-- Pull the active Spring profile so it can be embedded as a custom field in JSON output -->
     <springProperty scope="context" name="activeProfile" source="spring.profiles.active" defaultValue="default"/>
 
-    <!-- Local dev: human-readable pattern with correlation ID in brackets -->
+    <!-- Local dev: human-readable pattern with all MDC context fields for easy debugging -->
     <springProfile name="local">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{correlationId:-no-corr-id}] - %msg%n</pattern>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [corr:%X{correlationId:-none}] [req:%X{request_id:-none}] [%X{actor_email:-anonymous}] [%X{client_ip:-unknown}] - %msg%n</pattern>
             </encoder>
         </appender>
-        <root level="INFO">
+        <root level="DEBUG">
             <appender-ref ref="CONSOLE"/>
         </root>
     </springProfile>
 
-    <!-- All non-local profiles (dev, prod, staging, etc.): structured JSON for log aggregation -->
+    <!-- All non-local profiles (dev, prod, staging, etc.): structured JSON for log aggregation.
+         Uses LoggingEventCompositeJsonEncoder so RedactingMessageJsonProvider replaces the
+         default MessageJsonProvider, ensuring sensitive patterns are redacted before output. -->
     <springProfile name="!local">
         <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <!-- app_name and environment appear in every JSON log line -->
-                <customFields>{"app_name":"pipeline-assistant","environment":"${activeProfile}"}</customFields>
-                <!-- MDC fields (correlationId) are included automatically by LogstashEncoder -->
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp>
+                        <timeZone>UTC</timeZone>
+                    </timestamp>
+                    <logLevel>
+                        <fieldName>level</fieldName>
+                    </logLevel>
+                    <loggerName>
+                        <fieldName>logger_name</fieldName>
+                    </loggerName>
+                    <threadName>
+                        <fieldName>thread_name</fieldName>
+                    </threadName>
+                    <!-- RedactingMessageJsonProvider replaces the default MessageJsonProvider
+                         to strip passwords, Bearer tokens, AWS keys, and other secrets. -->
+                    <provider class="com.opsera.pipelineassistant.config.RedactingMessageJsonProvider"/>
+                    <!-- MDC fields (correlationId, request_id, actor_email, client_ip) are included automatically -->
+                    <mdc/>
+                    <stackTrace>
+                        <fieldName>stack_trace</fieldName>
+                        <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                            <maxDepthPerCause>20</maxDepthPerCause>
+                            <rootCauseFirst>true</rootCauseFirst>
+                        </throwableConverter>
+                    </stackTrace>
+                    <customFields>{"app_name":"pipeline-assistant","environment":"${activeProfile}"}</customFields>
+                </providers>
             </encoder>
         </appender>
         <root level="INFO">

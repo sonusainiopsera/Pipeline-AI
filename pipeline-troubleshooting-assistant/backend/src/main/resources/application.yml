@@ -28,6 +28,9 @@ spring:
     multipart:
       max-request-size: 2MB
       max-file-size: 2MB
+  output:
+    ansi:
+      enabled: NEVER
 
 server:
   port: 8080
@@ -66,6 +69,10 @@ retention:
   analyzed-logs-days: 90
   # Retention period for audit_logs: records older than this are purged in the same daily run.
   audit-logs-days: 365
+
+logging:
+  level:
+    com.opsera.pipelineassistant: INFO
 
 management:
   endpoints:
