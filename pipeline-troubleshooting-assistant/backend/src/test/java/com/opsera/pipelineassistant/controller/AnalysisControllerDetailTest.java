@@ -1,6 +1,8 @@
 package com.opsera.pipelineassistant.controller;
 
 import com.opsera.pipelineassistant.dto.Responses.HistoryDetailDTO;
+import com.opsera.pipelineassistant.security.CustomUserDetailsService;
+import com.opsera.pipelineassistant.security.JwtTokenProvider;
 import com.opsera.pipelineassistant.service.AnalysisService;
 import com.opsera.pipelineassistant.service.DashboardService;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,12 @@ class AnalysisControllerDetailTest {
 
     @MockBean
     private DashboardService dashboardService;
+
+    @MockBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private CustomUserDetailsService customUserDetailsService;
 
     // ── GET /api/history/{id} — 200 OK ────────────────────────────────────────
 
