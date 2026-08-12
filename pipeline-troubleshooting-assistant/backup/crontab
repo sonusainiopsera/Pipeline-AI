@@ -1,1 +1,2 @@
 BACKUP_CRON_SCHEDULE_PLACEHOLDER /scripts/backup.sh >> /proc/1/fd/1 2>&1
+VERIFY_CRON_SCHEDULE_PLACEHOLDER /scripts/verify-restore.sh >> /proc/1/fd/1 2>&1

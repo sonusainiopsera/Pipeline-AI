@@ -17,6 +17,7 @@ fi
 : "${DB_PORT:=5432}"
 : "${BACKUP_CRON_SCHEDULE:=0 2 * * *}"
 : "${BACKUP_RETENTION_DAYS:=30}"
+: "${VERIFY_CRON_SCHEDULE:=0 4 * * 0}"
 
 # ─── Create .pgpass for non-interactive pg_dump authentication ─────────────────
 # Written fresh on each startup so it always reflects the current credentials.
@@ -30,13 +31,14 @@ chmod 600 "${PGPASSFILE_GLOBAL}"
 CRONTAB_SRC="/scripts/crontab.tmpl"
 CRONTAB_INSTALLED="/etc/crontabs/root"
 
-# Replace placeholder with actual schedule value
-sed "s|BACKUP_CRON_SCHEDULE_PLACEHOLDER|${BACKUP_CRON_SCHEDULE}|g" \
+# Replace placeholders with actual schedule values
+sed "s|BACKUP_CRON_SCHEDULE_PLACEHOLDER|${BACKUP_CRON_SCHEDULE}|g;
+     s|VERIFY_CRON_SCHEDULE_PLACEHOLDER|${VERIFY_CRON_SCHEDULE}|g" \
     "${CRONTAB_SRC}" > "${CRONTAB_INSTALLED}"
 
 chmod 600 "${CRONTAB_INSTALLED}"
 
-echo "Backup container started. Schedule: ${BACKUP_CRON_SCHEDULE}  Retention: ${BACKUP_RETENTION_DAYS} days"
+echo "Backup container started. Schedule: ${BACKUP_CRON_SCHEDULE}  Verify: ${VERIFY_CRON_SCHEDULE}  Retention: ${BACKUP_RETENTION_DAYS} days"
 
 # ─── Run crond in foreground ──────────────────────────────────────────────────
 exec crond -f -l 2

@@ -96,3 +96,13 @@ log_json "$(printf '{"timestamp":"%s","status":"success","filename":"%s","size_b
 if [ -f "/scripts/retention.sh" ]; then
     /scripts/retention.sh
 fi
+
+# ─── Push to off-site S3 storage (warning-only, does not fail the backup) ─────
+# S3_BUCKET must be set in the environment to enable off-site push.
+if [ -n "${S3_BUCKET:-}" ] && [ -f "/scripts/push-offsite.sh" ]; then
+    /scripts/push-offsite.sh || {
+        PUSH_EXIT=$?
+        log_json "$(printf '{"timestamp":"%s","status":"warning","message":"off-site push failed with exit code %d — local backup is intact","filename":"%s"}' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${PUSH_EXIT}" "${FILENAME}")"
+    }
+fi

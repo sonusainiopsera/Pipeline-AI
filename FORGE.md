@@ -168,3 +168,10 @@
 - **Files:** 7 (+514/-11)
 - **Duration:** 557ss
 - **Approach:** Extracted the inline pattern-matching loop from AnalysisService into a dedicated PatternMatcher Spring @Service bean in a new analysis package. PatternMatcher.match() accepts log text and a List<ErrorKnowledgeBase>, splits errorPattern on comma/newline via regex, trims keywords, and returns List<ScoredMatch> records (each pairing an ErrorKnowledgeBase entry with its integer hit count). AnalysisService now delegates to PatternMatcher via @RequiredArgsConstructor injection; all scoring constants, response templating, and persistence remain inline. GoldenFileAnalysisTest and AnalysisServiceTest both received a @Spy PatternMatcher field so their @InjectMocks wiring continues to work after the new dependency was added.
+
+## WO-070: User Story: WO-070 - Off-site Backup Push and Restore Verification
+- **Status:** completed
+- **Commit:** `c3b8cb3`
+- **Files:** 11 (+826/-9)
+- **Duration:** 654ss
+- **Approach:** Extended the existing WO-069 backup container with four new shell scripts and one test orchestration script. push-offsite.sh uses the AWS CLI (supporting --endpoint-url for MinIO and other S3-compatible stores) to upload the latest .dump file to s3://BUCKET/backups/YYYY/MM/filename.dump. remote-retention.sh lists objects via aws s3 ls, parses the date column, computes a lexicographically-comparable cutoff with busybox date -d @epoch, and deletes expired objects. restore.sh accepts --file/--target-db args and runs pg_restore --clean --if-exists --no-owner. verify-restore.sh creates pipeline_assistant_verify, restores, validates both tables exist and row counts are correct, runs the categoryCounts aggregate query, drops the temp db via a trap, and exits with the failure count. backup.sh was extended to call push-offsite.sh conditionally (only when S3_BUCKET is set), treating its failure as a warning. entrypoint.sh gained VERIFY_CRON_SCHEDULE support (default Sunday 04:00 UTC). Dockerfile gained aws-cli via apk. docker-compose.test.yml adds a minio/minio service override for integration testing.
