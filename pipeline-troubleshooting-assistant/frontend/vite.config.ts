@@ -6,6 +6,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // Restrict Vitest to src/ — Playwright e2e tests live in tests/ and are run separately
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
   server: {
     proxy: {

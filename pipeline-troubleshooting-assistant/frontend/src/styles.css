@@ -1,0 +1,40 @@
+/* ─── Focus visible ring – WCAG 2.1 AA SC 2.4.7 ─────────────────────────── */
+/* Show a 2px solid #60a5fa ring with 2px offset for all keyboard-focused elements */
+*:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* Suppress focus ring on mouse/touch clicks — only show for keyboard navigation */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* main#main-content: programmatic focus only (skip link target), no visible ring */
+#main-content:focus {
+  outline: none;
+}
+
+/* ─── Skip navigation link ───────────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -48px;
+  left: 8px;
+  background-color: #101a2d;
+  color: #60a5fa;
+  padding: 10px 18px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  z-index: 9999;
+  border-radius: 0 0 6px 6px;
+  border: 2px solid #60a5fa;
+  /* Transition slides it into view on focus */
+  transition: top 0.15s ease;
+}
+
+/* Override :focus-visible outline — the border itself provides visibility */
+.skip-link:focus-visible {
+  top: 0;
+  outline: none;
+}

@@ -55,12 +55,14 @@ export default function AnalyzePage() {
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
+              type="button"
               onClick={handleAnalyze}
               disabled={loading || !logText.trim()}
             >
               {loading ? 'Analyzing...' : 'Analyze'}
             </button>
             <button
+              type="button"
               onClick={() => {
                 setLogText('');
                 setResult(null);
@@ -122,7 +124,7 @@ export default function AnalyzePage() {
               style={{ width: '100%', boxSizing: 'border-box', padding: '8px', marginTop: '6px' }}
               aria-label="Customer update text"
             />
-            <button onClick={handleCopy} style={{ marginTop: '6px' }}>
+            <button type="button" onClick={handleCopy} style={{ marginTop: '6px' }}>
               {copied ? 'Copied!' : 'Copy Customer Update'}
             </button>
           </div>

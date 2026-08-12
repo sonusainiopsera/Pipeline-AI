@@ -42,6 +42,9 @@ export default function HistoryPage() {
                 <td style={{ padding: '8px' }}>{log.confidence}%</td>
                 <td style={{ padding: '8px' }}>
                   <button
+                    type="button"
+                    aria-expanded={expandedId === log.id}
+                    aria-controls={`history-detail-${log.id}`}
                     onClick={() =>
                       setExpandedId(expandedId === log.id ? null : log.id)
                     }
@@ -51,7 +54,7 @@ export default function HistoryPage() {
                 </td>
               </tr>
               {expandedId === log.id && (
-                <tr>
+                <tr id={`history-detail-${log.id}`}>
                   <td colSpan={5} style={{ padding: '16px', backgroundColor: '#f9f9f9' }}>
                     <div style={{ marginBottom: '12px' }}>
                       <strong>Root Cause:</strong>

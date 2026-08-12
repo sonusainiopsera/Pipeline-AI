@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "errorPattern": "NullPointerException",
+    "category": "BUILD_FAILURE",
+    "rootCause": "Null reference in bean context",
+    "solution": "Verify all required beans are declared and wiring is correct",
+    "severity": "HIGH"
+  },
+  {
+    "id": 2,
+    "errorPattern": "Connection refused: localhost:5432",
+    "category": "DATABASE_ERROR",
+    "rootCause": "PostgreSQL service not running or port mismatch",
+    "solution": "Ensure DB service is healthy before pipeline starts; check healthcheck config",
+    "severity": "CRITICAL"
+  }
+]
