@@ -217,3 +217,10 @@
 - **Files:** 2 (+359/-7)
 - **Duration:** 207ss
 - **Approach:** Built on the WO-087 nginx.conf (rate limiting + security headers) by adding all proxy hardening directives. Added an upstream backend_pool block with server backend:8080 and keepalive 32 in the http context, then updated all proxy_pass directives to use it. Added proxy_http_version 1.1 and proxy_set_header Connection '' to all proxy location blocks for HTTP/1.1 keepalive. Added proxy timeouts (connect 5s, read 30s, send 10s) to /health, /api/auth/, and /api/ locations. Added proxy buffer configuration (proxy_buffer_size 4k, proxy_buffers 8 8k, proxy_busy_buffers_size 16k) and large_client_header_buffers 4 8k to the server block. Added limit_conn_zone in the http context and limit_conn conn_limit 50 in the server block. Added a /health location proxying to http://backend_pool/actuator/health with access_log off and no rate limiting. Defined a structured log_format with 9 fields including upstream_response_time, applied it to the server access_log. Updated gzip to min_length 256, added gzip_vary on and gzip_proxied any. Added proxy_intercept_errors on and error_page 503 = @conn_limited with a new @conn_limited named location repeating the security headers and returning JSON.
+
+## WO-009: User Story: WO-009 - Configure GitHub Actions CI Pipeline with Coverage Gate
+- **Status:** completed
+- **Commit:** `41194cd`
+- **Files:** 2 (+18/-4)
+- **Duration:** 219ss
+- **Approach:** The CI workflow and JaCoCo plugin configuration already existed from prior work orders but were incomplete for this story's requirements. Two targeted changes were made: (1) pom.xml — replaced the placeholder JaCoCo check execution (BUNDLE element, 0% minimum) with a production gate using PACKAGE element scoped to the service and controller packages with a 0.80 LINE COVEREDRATIO minimum; (2) ci.yml — added --no-transfer-progress to the mvn verify command to reduce log noise, and added an actions/upload-artifact@v4 step to upload backend/target/site/jacoco/ as the 'coverage-report' artifact with 30-day retention and if: always() to ensure the report is available even when tests fail.

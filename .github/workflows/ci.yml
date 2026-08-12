@@ -59,7 +59,7 @@ jobs:
           DB_URL: jdbc:postgresql://localhost:5432/pipeline_assistant_test
           DB_USERNAME: test
           DB_PASSWORD: test
-        run: mvn clean verify --batch-mode
+        run: mvn clean verify --batch-mode --no-transfer-progress
 
       - name: Publish test results
         uses: dorny/test-reporter@v1
@@ -69,6 +69,14 @@ jobs:
           path: pipeline-troubleshooting-assistant/backend/target/surefire-reports/*.xml
           reporter: java-junit
           fail-on-error: false
+
+      - name: Upload JaCoCo coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: pipeline-troubleshooting-assistant/backend/target/site/jacoco/
+          retention-days: 30
 
   # ── Secret scan: grep all tracked files for hardcoded credentials ────────────
   secret-scan:

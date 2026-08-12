@@ -126,7 +126,9 @@
                             <goal>report</goal>
                         </goals>
                     </execution>
-                    <!-- Coverage rule: minimum 0% initially (will be raised to 80% later) -->
+                    <!-- Coverage gate: 80% line coverage on service and controller packages.
+                         Enforced on every mvn verify run — build fails if coverage drops below
+                         threshold. Applies per-package so each package is checked independently. -->
                     <execution>
                         <id>check</id>
                         <phase>verify</phase>
@@ -136,12 +138,16 @@
                         <configuration>
                             <rules>
                                 <rule>
-                                    <element>BUNDLE</element>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com/opsera/pipelineassistant/service</include>
+                                        <include>com/opsera/pipelineassistant/controller</include>
+                                    </includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.00</minimum>
+                                            <minimum>0.80</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
