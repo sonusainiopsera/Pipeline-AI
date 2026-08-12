@@ -161,3 +161,10 @@
 - **Files:** 2 (+104/-0)
 - **Duration:** 275ss
 - **Approach:** All six security headers (Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, X-XSS-Protection) were already present in nginx.conf from WO-086, applied at server-block level with 'always' and repeated in the static-assets location block to handle Nginx's add_header scoping rule. The only outstanding requirement was client_max_body_size 2m (AC7), which was added to the server block with a comment explaining the sizing rationale. Created scripts/verify-security-headers.sh as a lightweight curl-based verification script that assumes the Docker Compose environment is already running; it checks all six required headers via curl -sI against localhost:5173 and tests that a 3 MB POST returns a 4xx response.
+
+## WO-043: User Story: WO-043 - Extract PatternMatcher from AnalysisService
+- **Status:** completed
+- **Commit:** `91033c7`
+- **Files:** 7 (+514/-11)
+- **Duration:** 557ss
+- **Approach:** Extracted the inline pattern-matching loop from AnalysisService into a dedicated PatternMatcher Spring @Service bean in a new analysis package. PatternMatcher.match() accepts log text and a List<ErrorKnowledgeBase>, splits errorPattern on comma/newline via regex, trims keywords, and returns List<ScoredMatch> records (each pairing an ErrorKnowledgeBase entry with its integer hit count). AnalysisService now delegates to PatternMatcher via @RequiredArgsConstructor injection; all scoring constants, response templating, and persistence remain inline. GoldenFileAnalysisTest and AnalysisServiceTest both received a @Spy PatternMatcher field so their @InjectMocks wiring continues to work after the new dependency was added.

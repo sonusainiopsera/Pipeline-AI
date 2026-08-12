@@ -1,5 +1,7 @@
 package com.opsera.pipelineassistant.service;
 
+import com.opsera.pipelineassistant.analysis.PatternMatcher;
+import com.opsera.pipelineassistant.analysis.ScoredMatch;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
@@ -20,6 +22,7 @@ public class AnalysisService {
     private final ErrorRepository errorRepository;
     private final AnalyzedLogRepository analyzedLogRepository;
     private final LogSanitizer logSanitizer;
+    private final PatternMatcher patternMatcher;
 
     public AnalyzedLog analyze(String logText) {
         String sanitizedLog;
@@ -34,21 +37,15 @@ public class AnalysisService {
         }
 
         List<ErrorKnowledgeBase> patterns = errorRepository.findAll();
+        List<ScoredMatch> scored = patternMatcher.match(sanitizedLog, patterns);
 
         ErrorKnowledgeBase bestMatch = null;
         int bestMatchCount = 0;
 
-        for (ErrorKnowledgeBase pattern : patterns) {
-            String[] keywords = pattern.getErrorPattern().split(",");
-            int matchCount = 0;
-            for (String keyword : keywords) {
-                if (sanitizedLog.toLowerCase().contains(keyword.trim().toLowerCase())) {
-                    matchCount++;
-                }
-            }
-            if (matchCount > bestMatchCount) {
-                bestMatchCount = matchCount;
-                bestMatch = pattern;
+        for (ScoredMatch sm : scored) {
+            if (sm.score() > bestMatchCount) {
+                bestMatchCount = sm.score();
+                bestMatch = sm.entry();
             }
         }
 

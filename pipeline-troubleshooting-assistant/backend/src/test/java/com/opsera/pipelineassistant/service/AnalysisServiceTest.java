@@ -1,5 +1,6 @@
 package com.opsera.pipelineassistant.service;
 
+import com.opsera.pipelineassistant.analysis.PatternMatcher;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
@@ -31,6 +33,11 @@ class AnalysisServiceTest {
 
     @Mock
     private LogSanitizer logSanitizer;
+
+    // Use a real PatternMatcher so tests exercise the actual matching logic.
+    // PatternMatcher has no dependencies, so @Spy creates a real instance.
+    @Spy
+    private PatternMatcher patternMatcher;
 
     @InjectMocks
     private AnalysisService analysisService;

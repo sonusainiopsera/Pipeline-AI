@@ -1,5 +1,6 @@
 package com.opsera.pipelineassistant.golden;
 
+import com.opsera.pipelineassistant.analysis.PatternMatcher;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
@@ -13,6 +14,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
@@ -46,6 +48,10 @@ class GoldenFileAnalysisTest {
 
     @Mock
     private LogSanitizer logSanitizer;
+
+    // Real PatternMatcher — no external dependencies, exercises actual matching logic
+    @Spy
+    private PatternMatcher patternMatcher;
 
     @InjectMocks
     private AnalysisService analysisService;
