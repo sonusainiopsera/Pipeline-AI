@@ -1,5 +1,7 @@
 # Pipeline Troubleshooting Assistant
 
+[![CI](https://github.com/sonusainiopsera/Pipeline-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/sonusainiopsera/Pipeline-AI/actions/workflows/ci.yml)
+
 An internal DevOps support tool that enables support engineers to diagnose CI/CD pipeline failures by matching pasted failure logs against a curated knowledge base, producing explainable root-cause analyses with confidence scoring, and generating customer-ready communications.
 
 ## Architecture

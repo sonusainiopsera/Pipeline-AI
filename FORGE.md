@@ -56,3 +56,10 @@
 - **Files:** 14 (+698/-0)
 - **Duration:** 479ss
 - **Approach:** Scaffolded the complete React 18 / TypeScript frontend (Vite + Vitest) since no frontend directory existed, then implemented the WO-042 sanitization display layer on top. Created sanitization.ts with detectPotentialSecrets (regex patterns matching the same secret types as the backend LogSanitizer), REDACTION_PLACEHOLDER_REGEX (specific _REDACTED suffix pattern to avoid false positives on generic bracket tokens like [INFO]), and highlightRedactions (uses React.createElement to produce styled span nodes — never dangerouslySetInnerHTML). Created SanitizedLogDisplay.tsx component that renders highlighted log text with a green Shield indicator when placeholders are present and a red AlertTriangle warning banner when unredacted secrets are detected. Updated History.tsx to use SanitizedLogDisplay for log text in expanded rows. Updated Analyze.tsx to show a 'Log sanitized before storage' shield notice whenever analysis results are displayed. Created 24 Vitest unit tests covering all three utility exports.
+
+## WO-064: User Story: WO-064 - GitHub Actions CI Pipeline with Build and Test
+- **Status:** completed
+- **Commit:** `4e4d355`
+- **Files:** 2 (+108/-0)
+- **Duration:** 256ss
+- **Approach:** Created .github/workflows/ci.yml at the repository root (the only path GitHub Actions recognises) with two parallel jobs: 'backend' and 'frontend'. The backend job provisions a postgres:16-alpine service container with test credentials, sets defaults.run.working-directory to pipeline-troubleshooting-assistant/backend, caches ~/.m2/repository keyed on pom.xml hash, runs mvn clean verify with DB_URL/DB_USERNAME/DB_PASSWORD env vars pointing to the service container, and publishes JUnit XML reports via dorny/test-reporter. The frontend job caches ~/.npm keyed on package-lock.json hash, then runs npm ci + npm test + npm run build from pipeline-troubleshooting-assistant/frontend. A concurrency group cancels in-progress runs on the same branch. Added a GitHub Actions status badge to README.md at the top.
