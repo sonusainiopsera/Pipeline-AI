@@ -1,0 +1,24 @@
+# docker-compose.prod.yml — Production override
+#
+# Replaces local build directives with pre-built images from GitHub Container Registry.
+# Set REGISTRY_OWNER to the GitHub user or organization that owns the repository.
+#
+# Usage:
+#   REGISTRY_OWNER=your-org docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Or add REGISTRY_OWNER to your .env file and run:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# To roll back to a previous release, replace 'latest' with a specific tag, e.g.:
+#   BACKEND_IMAGE_TAG=sha-abc1234 FRONTEND_IMAGE_TAG=sha-abc1234 docker compose ...
+
+version: '3.8'
+
+services:
+  backend:
+    image: ghcr.io/${REGISTRY_OWNER}/pipeline-assistant-backend:${BACKEND_IMAGE_TAG:-latest}
+    build: null
+
+  frontend:
+    image: ghcr.io/${REGISTRY_OWNER}/pipeline-assistant-frontend:${FRONTEND_IMAGE_TAG:-latest}
+    build: null
