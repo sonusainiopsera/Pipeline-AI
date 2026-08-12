@@ -88,8 +88,8 @@ export interface AuthMessageResponse {
 }
 
 export interface MfaSetupResponse {
-  secret: string;
-  qrCodeUrl: string;
+  secret?: string;
+  qrCodeUri: string;
   recoveryCodes: string[];
 }
 

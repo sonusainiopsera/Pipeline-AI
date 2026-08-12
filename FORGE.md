@@ -539,3 +539,10 @@
 - **Files:** 13 (+824/-0)
 - **Duration:** 730ss
 - **Approach:** Implemented TOTP-based MFA enrollment via two new endpoints on AuthController. AesEncryptionUtil uses AES-256-GCM with a random 12-byte IV (prepended to ciphertext, Base64-encoded) to encrypt TOTP secrets at rest; the key is derived from a config property via SHA-256. MfaService orchestrates the full flow: generates a base32 TOTP secret using dev.samstevens.totp, builds an otpauth:// QR URI, generates 8 eight-character alphanumeric recovery codes (BCrypt-hashed for storage as a JSON array), encrypts and stores the secret with a 10-minute setup expiry, then on verify decrypts the secret, validates the code with ±1 time-step tolerance, and sets mfaEnabled=true. Both endpoints require authentication via @PreAuthorize("isAuthenticated()"). Flyway migration V5 adds mfa_setup_expires_at and recovery_codes columns.
+
+## WO-033: User Story: WO-033 - Create Login and MFA Frontend Pages
+- **Status:** completed
+- **Commit:** `be2fc97`
+- **Files:** 12 (+1391/-3)
+- **Duration:** 1204ss
+- **Approach:** Created four auth pages following existing component patterns (inline styles using established design tokens, useState hooks, direct api calls). App.tsx uses window.location.pathname to detect auth routes (/login, /register, /mfa/verify, /mfa/enroll) and renders the corresponding page outside the ProtectedRoute/Layout wrapper — consistent with the existing state-based routing architecture (no react-router-dom). QR code is displayed as a copyable text textarea showing the otpauth:// URI, as the WO explicitly allows this alternative. Fixed MfaSetupResponse type to use qrCodeUri (matching WO-028 backend) and updated authResponses fixture. Tests use vi.mock('../api') with Vitest's hoisting to mock the api module and assert rendering, validation, submission, and redirect behavior.

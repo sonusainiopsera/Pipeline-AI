@@ -43,7 +43,7 @@ export const refreshResponse: AuthMessageResponse = {
 
 export const mfaSetupResponse: MfaSetupResponse = {
   secret: 'JBSWY3DPEHPK3PXP',
-  qrCodeUrl: 'otpauth://totp/PipelineAssistant:user@example.com?secret=JBSWY3DPEHPK3PXP',
+  qrCodeUri: 'otpauth://totp/PipelineAssistant:user@example.com?secret=JBSWY3DPEHPK3PXP',
   recoveryCodes: ['AAAA-BBBB', 'CCCC-DDDD', 'EEEE-FFFF'],
 };
 
