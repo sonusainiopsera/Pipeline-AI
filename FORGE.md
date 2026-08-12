@@ -602,3 +602,10 @@
 - **Files:** 7 (+336/-66)
 - **Duration:** 590ss
 - **Approach:** Extended the existing DashboardService and AnalyzedLogRepository to support the 4 new aggregate metrics. Added typed DashboardResponse and CategoryStat records to Responses.java. Added 3 JPQL queries to the repository (AVG confidence with Optional return, time-range COUNT with @Param, and top-N category query using Pageable for H2/PostgreSQL portability). Rewrote DashboardService.getStats() to populate all fields including topCategories with percentage calculation. Updated AnalysisController to return the typed record instead of Map<String, Object>.
+
+## WO-080: User Story: WO-080 - Build Audit Log Viewer UI and API
+- **Status:** completed
+- **Commit:** `8a4ae05`
+- **Files:** 14 (+1339/-4)
+- **Duration:** 640ss
+- **Approach:** Built on top of the existing AuditLog entity and AuditLogRepository (already in codebase from security epic). Extended the repository with JpaSpecificationExecutor to enable dynamic Specification-based queries. Created AuditLogSpecification with four static filter methods. Added AuditLogDTO record to Responses.java (exposing display-safe fields, excluding actorId). Created AuditLogService delegating to the repository with a composed Specification. Created AuditLogController with @PreAuthorize('hasRole(MANAGER)'), date range validation, and 100-record page size cap. Frontend: added AuditLogEntry/AuditLogPage types, getAuditLogs() with URLSearchParams-based filter query construction, AuditLog.tsx page with filter form/table/pagination, and wired into App.tsx routing and Layout.tsx sidebar (conditional on MANAGER role via getUserRole()).

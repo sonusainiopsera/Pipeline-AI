@@ -1,5 +1,7 @@
 import type {
   AnalyzedLog,
+  AuditLogEntry,
+  AuditLogPage,
   AuthMessageResponse,
   HistoryItem,
   HistoryListItem,
@@ -18,6 +20,8 @@ import type {
 
 export type {
   AnalyzedLog,
+  AuditLogEntry,
+  AuditLogPage,
   AuthMessageResponse,
   HistoryItem,
   HistoryListItem,
@@ -256,4 +260,29 @@ export async function updateKnowledgeBaseEntry(
 
 export async function deleteKnowledgeBaseEntry(id: number): Promise<void> {
   return request<void>(`${BASE}/errors/${id}`, { method: 'DELETE' });
+}
+
+// ── Audit log endpoints ────────────────────────────────────────────────────────
+
+export interface AuditLogFilters {
+  action?: string;
+  resourceType?: string;
+  actorEmail?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<AuditLogPage> {
+  const params = new URLSearchParams();
+  if (filters.action) params.set('action', filters.action);
+  if (filters.resourceType) params.set('resourceType', filters.resourceType);
+  if (filters.actorEmail) params.set('actorEmail', filters.actorEmail);
+  if (filters.startDate) params.set('startDate', filters.startDate);
+  if (filters.endDate) params.set('endDate', filters.endDate);
+  if (filters.page !== undefined) params.set('page', String(filters.page));
+  if (filters.size !== undefined) params.set('size', String(filters.size));
+  const qs = params.toString();
+  return request<AuditLogPage>(`${BASE}/audit-logs${qs ? `?${qs}` : ''}`);
 }

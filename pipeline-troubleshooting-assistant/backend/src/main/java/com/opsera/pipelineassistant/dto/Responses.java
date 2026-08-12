@@ -1,6 +1,7 @@
 package com.opsera.pipelineassistant.dto;
 
 import com.opsera.pipelineassistant.model.AnalyzedLog;
+import com.opsera.pipelineassistant.model.AuditLog;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -11,6 +12,30 @@ public final class Responses {
     private Responses() {}
 
     public record CategoryStat(String category, long count, double percentage) {}
+
+    public record AuditLogDTO(
+            Long id,
+            String actorEmail,
+            String action,
+            String resourceType,
+            String resourceId,
+            Map<String, Object> details,
+            String ipAddress,
+            LocalDateTime createdAt
+    ) {
+        public static AuditLogDTO from(AuditLog log) {
+            return new AuditLogDTO(
+                    log.getId(),
+                    log.getActorEmail(),
+                    log.getAction(),
+                    log.getResourceType(),
+                    log.getResourceId(),
+                    log.getDetails(),
+                    log.getIpAddress(),
+                    log.getCreatedAt()
+            );
+        }
+    }
 
     public record DashboardResponse(
             long totalErrors,

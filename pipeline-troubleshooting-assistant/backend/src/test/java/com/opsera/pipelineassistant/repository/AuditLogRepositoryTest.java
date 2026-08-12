@@ -1,11 +1,15 @@
 package com.opsera.pipelineassistant.repository;
 
+import com.opsera.pipelineassistant.audit.AuditLogSpecification;
 import com.opsera.pipelineassistant.fixtures.AuditLogTestFixtures;
 import com.opsera.pipelineassistant.model.AuditLog;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
@@ -172,5 +176,137 @@ class AuditLogRepositoryTest {
         entityManager.clear();
 
         assertThat(repository.count()).isGreaterThanOrEqualTo(5);
+    }
+
+    // ── Specification: byAction ────────────────────────────────────────────────
+
+    @Test
+    void specByActionReturnsOnlyMatchingAction() {
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("a@x.com").action("CREATE").resourceType("KB").build());
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("b@x.com").action("DELETE").resourceType("KB").build());
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("c@x.com").action("CREATE").resourceType("AUTH").build());
+        entityManager.clear();
+
+        Specification<AuditLog> spec = Specification.where(AuditLogSpecification.byAction("CREATE"));
+        Page<AuditLog> result = repository.findAll(spec, PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(2L);
+        assertThat(result.getContent()).allMatch(l -> l.getAction().equals("CREATE"));
+    }
+
+    @Test
+    void specByActionWithNullReturnsAll() {
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("a@x.com").action("CREATE").resourceType("KB").build());
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("b@x.com").action("DELETE").resourceType("KB").build());
+        entityManager.clear();
+
+        Specification<AuditLog> spec = Specification.where(AuditLogSpecification.byAction(null));
+        Page<AuditLog> result = repository.findAll(spec, PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(2L);
+    }
+
+    // ── Specification: byResourceType ─────────────────────────────────────────
+
+    @Test
+    void specByResourceTypeReturnsOnlyMatchingType() {
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("a@x.com").action("CREATE").resourceType("KNOWLEDGE_BASE").build());
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("b@x.com").action("LOGIN").resourceType("AUTH").build());
+        entityManager.clear();
+
+        Specification<AuditLog> spec = Specification.where(AuditLogSpecification.byResourceType("AUTH"));
+        Page<AuditLog> result = repository.findAll(spec, PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+        assertThat(result.getContent().get(0).getResourceType()).isEqualTo("AUTH");
+    }
+
+    // ── Specification: byActorEmailContaining ─────────────────────────────────
+
+    @Test
+    void specByActorEmailContainingFindsPartialMatch() {
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("alice@example.com").action("CREATE").resourceType("KB").build());
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("bob@example.com").action("DELETE").resourceType("KB").build());
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("charlie@other.org").action("LOGIN").resourceType("AUTH").build());
+        entityManager.clear();
+
+        Specification<AuditLog> spec = Specification.where(AuditLogSpecification.byActorEmailContaining("example"));
+        Page<AuditLog> result = repository.findAll(spec, PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(2L);
+    }
+
+    @Test
+    void specByActorEmailContainingIsCaseInsensitive() {
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("Admin@Example.com").action("CREATE").resourceType("KB").build());
+        entityManager.clear();
+
+        Specification<AuditLog> spec = Specification.where(AuditLogSpecification.byActorEmailContaining("admin"));
+        Page<AuditLog> result = repository.findAll(spec, PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+    }
+
+    // ── Specification: byDateRange ─────────────────────────────────────────────
+
+    @Test
+    void specByDateRangeFiltersCorrectly() {
+        AuditLog early = entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("a@x.com").action("CREATE").resourceType("KB").build());
+        AuditLog middle = entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("b@x.com").action("UPDATE").resourceType("KB").build());
+        AuditLog late = entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("c@x.com").action("DELETE").resourceType("KB").build());
+
+        LocalDateTime t1 = LocalDateTime.of(2024, 1, 1, 0, 0);
+        LocalDateTime t2 = LocalDateTime.of(2025, 1, 1, 0, 0);
+        LocalDateTime t3 = LocalDateTime.of(2026, 1, 1, 0, 0);
+
+        setCreatedAt(early.getId(), t1);
+        setCreatedAt(middle.getId(), t2);
+        setCreatedAt(late.getId(), t3);
+        entityManager.flush();
+        entityManager.clear();
+
+        LocalDateTime rangeStart = LocalDateTime.of(2024, 6, 1, 0, 0);
+        LocalDateTime rangeEnd = LocalDateTime.of(2025, 6, 1, 0, 0);
+        Specification<AuditLog> spec = Specification.where(AuditLogSpecification.byDateRange(rangeStart, rangeEnd));
+        Page<AuditLog> result = repository.findAll(spec, PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+        assertThat(result.getContent().get(0).getId()).isEqualTo(middle.getId());
+    }
+
+    // ── Combined specifications ────────────────────────────────────────────────
+
+    @Test
+    void combinedSpecificationsFilterCorrectly() {
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("admin@example.com").action("CREATE").resourceType("KNOWLEDGE_BASE").build());
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("admin@example.com").action("DELETE").resourceType("KNOWLEDGE_BASE").build());
+        entityManager.persistAndFlush(
+                AuditLog.builder().actorEmail("user@example.com").action("CREATE").resourceType("KNOWLEDGE_BASE").build());
+        entityManager.clear();
+
+        Specification<AuditLog> spec = Specification
+                .where(AuditLogSpecification.byAction("CREATE"))
+                .and(AuditLogSpecification.byActorEmailContaining("admin"));
+        Page<AuditLog> result = repository.findAll(spec, PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+        assertThat(result.getContent().get(0).getActorEmail()).isEqualTo("admin@example.com");
+        assertThat(result.getContent().get(0).getAction()).isEqualTo("CREATE");
     }
 }

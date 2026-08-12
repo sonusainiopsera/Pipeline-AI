@@ -1,0 +1,58 @@
+{
+  "content": [
+    {
+      "id": 1,
+      "actorEmail": "admin@example.com",
+      "action": "CREATE",
+      "resourceType": "KNOWLEDGE_BASE",
+      "resourceId": "42",
+      "details": { "category": "Docker Issues", "severity": "HIGH" },
+      "ipAddress": "192.168.1.100",
+      "createdAt": "2026-06-15T14:30:00"
+    },
+    {
+      "id": 2,
+      "actorEmail": "alice@example.com",
+      "action": "UPDATE",
+      "resourceType": "KNOWLEDGE_BASE",
+      "resourceId": "15",
+      "details": { "before": { "severity": "LOW" }, "after": { "severity": "HIGH" } },
+      "ipAddress": "10.0.0.5",
+      "createdAt": "2026-06-15T13:00:00"
+    },
+    {
+      "id": 3,
+      "actorEmail": "alice@example.com",
+      "action": "LOGIN",
+      "resourceType": "AUTH",
+      "resourceId": null,
+      "details": null,
+      "ipAddress": "10.0.0.5",
+      "createdAt": "2026-06-15T09:00:00"
+    },
+    {
+      "id": 4,
+      "actorEmail": "bob@example.com",
+      "action": "DELETE",
+      "resourceType": "KNOWLEDGE_BASE",
+      "resourceId": "7",
+      "details": { "before": { "errorPattern": "old pattern", "category": "Network" } },
+      "ipAddress": "172.16.0.1",
+      "createdAt": "2026-06-14T17:45:00"
+    },
+    {
+      "id": 5,
+      "actorEmail": "alice@example.com",
+      "action": "ANALYZE",
+      "resourceType": "ANALYZED_LOG",
+      "resourceId": "101",
+      "details": { "category": "Memory", "confidence": 92 },
+      "ipAddress": "10.0.0.5",
+      "createdAt": "2026-06-14T11:20:00"
+    }
+  ],
+  "totalElements": 150,
+  "totalPages": 8,
+  "number": 0,
+  "size": 20
+}

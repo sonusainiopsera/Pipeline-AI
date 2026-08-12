@@ -63,6 +63,25 @@ export interface KnowledgeBaseRequest {
 
 export type UserRole = 'ANALYST' | 'KB_ADMIN' | 'MANAGER';
 
+export interface AuditLogEntry {
+  id: number;
+  actorEmail: string;
+  action: string;
+  resourceType: string;
+  resourceId: string | null;
+  details: Record<string, unknown> | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogPage {
+  content: AuditLogEntry[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
 // ── Auth types ────────────────────────────────────────────────────────────────
 
 export interface LoginRequest {
