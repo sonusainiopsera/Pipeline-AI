@@ -20,6 +20,25 @@ export interface HistoryItem {
   createdAt: string;
 }
 
+// ── Dashboard types ───────────────────────────────────────────────────────────
+
+export interface CategoryStat {
+  category: string;
+  count: number;
+  percentage: number;
+}
+
+export interface DashboardData {
+  totalErrors: number;
+  analyzedLogs: number;
+  mostCommonIssue: string | null;
+  categoryBreakdown: Record<string, number>;
+  averageConfidence: number;
+  analysesLast7Days: number;
+  analysesLast30Days: number;
+  topCategories: CategoryStat[];
+}
+
 export interface PageResponse<T> {
   content: T[];
   totalElements: number;

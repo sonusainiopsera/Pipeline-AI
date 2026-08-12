@@ -3,7 +3,9 @@ import type {
   AuditLogEntry,
   AuditLogPage,
   AuthMessageResponse,
+  CategoryStat,
   ChangePasswordRequest,
+  DashboardData,
   HistoryItem,
   HistoryListItem,
   KnowledgeBaseEntry,
@@ -27,7 +29,9 @@ export type {
   AuditLogEntry,
   AuditLogPage,
   AuthMessageResponse,
+  CategoryStat,
   ChangePasswordRequest,
+  DashboardData,
   HistoryItem,
   HistoryListItem,
   KnowledgeBaseEntry,
@@ -248,6 +252,12 @@ export async function mfaRecover(data: MfaRecoverRequest): Promise<LoginResponse
     method: 'POST',
     body: JSON.stringify(data),
   });
+}
+
+// ── Dashboard endpoints ────────────────────────────────────────────────────────
+
+export async function getDashboard(): Promise<DashboardData> {
+  return request<DashboardData>(`${BASE}/dashboard`);
 }
 
 // ── Analysis endpoints ─────────────────────────────────────────────────────────
