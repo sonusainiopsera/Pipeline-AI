@@ -180,6 +180,9 @@
                     <includes>
                         <include>**/*Test.java</include>
                     </includes>
+                    <!-- Exclude @Tag("performance") tests from the default fast-feedback loop.
+                         Run them with: mvn verify -Pperformance -->
+                    <excludedGroups>performance</excludedGroups>
                 </configuration>
             </plugin>
 
@@ -248,4 +251,41 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Performance profile: runs @Tag("performance") tests via Failsafe.
+             Usage: mvn verify -Pperformance
+             Requires Docker to be available for Testcontainers PostgreSQL. -->
+        <profile>
+            <id>performance</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration>
+                            <!-- Include *Test.java in addition to default *IT.java
+                                 so AnalysisCachePerformanceTest is discovered. -->
+                            <includes>
+                                <include>**/*Test.java</include>
+                                <include>**/*IT.java</include>
+                            </includes>
+                            <!-- Run only tests tagged with 'performance'. -->
+                            <groups>performance</groups>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
