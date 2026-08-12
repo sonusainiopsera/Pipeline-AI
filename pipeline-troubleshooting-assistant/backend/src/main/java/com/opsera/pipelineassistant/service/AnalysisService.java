@@ -4,6 +4,7 @@ import com.opsera.pipelineassistant.analysis.PatternMatcher;
 import com.opsera.pipelineassistant.analysis.ResponseTemplater;
 import com.opsera.pipelineassistant.analysis.ScoredMatch;
 import com.opsera.pipelineassistant.analysis.ScoringEngine;
+import com.opsera.pipelineassistant.dto.Responses.HistoryDetailDTO;
 import com.opsera.pipelineassistant.dto.Responses.HistoryListDTO;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
@@ -127,5 +128,21 @@ public class AnalysisService {
     public Page<HistoryListDTO> getHistory(Pageable pageable) {
         return analyzedLogRepository.findAllByOrderByCreatedAtDesc(pageable)
                 .map(HistoryListDTO::from);
+    }
+
+    // @PreAuthorize("hasRole('ANALYST')") — placeholder for Spring Security integration (Security epic)
+    public HistoryDetailDTO historyDetail(Long id) {
+        AnalyzedLog record = analyzedLogRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Analysis record not found"));
+
+        String sanitizedLogText;
+        try {
+            sanitizedLogText = record.getLogText() != null ? logSanitizer.sanitize(record.getLogText()) : null;
+        } catch (Exception e) {
+            log.warn("Log sanitization failed for history detail id={}, returning null logText", id);
+            sanitizedLogText = null;
+        }
+
+        return HistoryDetailDTO.from(record, sanitizedLogText);
     }
 }

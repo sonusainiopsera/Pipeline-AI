@@ -37,6 +37,37 @@ public final class Responses {
     }
 
     /**
+     * Full projection of AnalyzedLog for the GET /api/history/{id} endpoint.
+     * Includes logText (sanitized) and customerUpdate — excluded from the list view
+     * under the Confidential data classification policy.
+     */
+    public record HistoryDetailDTO(
+            Long id,
+            String logText,
+            String detectedCategory,
+            String rootCause,
+            String suggestedFix,
+            String customerUpdate,
+            String severity,
+            Integer confidence,
+            LocalDateTime createdAt
+    ) {
+        public static HistoryDetailDTO from(AnalyzedLog log, String sanitizedLogText) {
+            return new HistoryDetailDTO(
+                    log.getId(),
+                    sanitizedLogText,
+                    log.getCategory(),
+                    log.getRootCause(),
+                    log.getSuggestedFix(),
+                    log.getCustomerUpdate(),
+                    log.getSeverity(),
+                    log.getConfidence(),
+                    log.getCreatedAt()
+            );
+        }
+    }
+
+    /**
      * Response DTO for the POST /api/analyze endpoint.
      * Includes matchedPatterns — the keyword strings from the best-matching KB entry
      * that were found in the submitted log text. This field is computed on-the-fly
