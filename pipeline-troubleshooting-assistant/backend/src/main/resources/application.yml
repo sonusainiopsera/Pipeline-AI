@@ -70,6 +70,11 @@ jwt:
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:86400}
 
+mfa:
+  # AES-256 encryption key for TOTP secrets stored in users.mfa_secret.
+  # Must be overridden with a strong random value via environment variable in production.
+  encryption-key: ${MFA_ENCRYPTION_KEY:placeholder-mfa-key-replace-in-production-minimum-32-chars}
+
 retention:
   # Retention period for analyzed_logs: records older than this are purged daily at 02:00 UTC.
   analyzed-logs-days: 90

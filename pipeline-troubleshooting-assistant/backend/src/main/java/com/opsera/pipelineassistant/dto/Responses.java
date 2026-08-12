@@ -17,6 +17,8 @@ public final class Responses {
 
     public record LoginResult(String accessToken, String rawRefreshToken, LoginResponse profile) {}
 
+    public record MfaSetupResponse(String qrCodeUri, List<String> recoveryCodes) {}
+
     /**
      * Lightweight projection of AnalyzedLog for the history list endpoint.
      * Intentionally excludes logText and customerUpdate per data classification policy

@@ -1,12 +1,15 @@
 package com.opsera.pipelineassistant.controller;
 
 import com.opsera.pipelineassistant.dto.LoginRequest;
+import com.opsera.pipelineassistant.dto.MfaVerifyRequest;
 import com.opsera.pipelineassistant.dto.RegisterRequest;
 import com.opsera.pipelineassistant.dto.ResendVerificationRequest;
 import com.opsera.pipelineassistant.dto.Responses.LoginResponse;
 import com.opsera.pipelineassistant.dto.Responses.LoginResult;
+import com.opsera.pipelineassistant.dto.Responses.MfaSetupResponse;
 import com.opsera.pipelineassistant.dto.Responses.RefreshResult;
 import com.opsera.pipelineassistant.dto.Responses.RegisterResponse;
+import com.opsera.pipelineassistant.security.MfaService;
 import com.opsera.pipelineassistant.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +19,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
@@ -28,6 +34,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final MfaService mfaService;
 
     @Value("${jwt.access-token-expiration}")
     private long accessTokenExpirationSeconds;
@@ -135,5 +142,24 @@ public class AuthController {
         log.info("POST /api/auth/verify/resend");
         authService.resendVerification(request.getEmail());
         return ResponseEntity.ok(Map.of("message", "Verification email sent."));
+    }
+
+    @PostMapping("/mfa/setup")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<MfaSetupResponse> setupMfa(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        log.info("POST /api/auth/mfa/setup");
+        MfaService.MfaSetupData data = mfaService.setupMfa(userDetails.getUsername());
+        return ResponseEntity.ok(new MfaSetupResponse(data.qrCodeUri(), data.recoveryCodes()));
+    }
+
+    @PostMapping("/mfa/verify")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, String>> verifyMfa(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody MfaVerifyRequest request) {
+        log.info("POST /api/auth/mfa/verify");
+        mfaService.verifyMfa(userDetails.getUsername(), request.getCode());
+        return ResponseEntity.ok(Map.of("message", "MFA enrollment completed successfully"));
     }
 }
