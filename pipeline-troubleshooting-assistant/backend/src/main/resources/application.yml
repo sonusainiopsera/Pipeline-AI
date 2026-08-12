@@ -42,6 +42,9 @@ app:
     # Resolved from environment variable; default is LOCAL-DEVELOPMENT-ONLY
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   base-url: ${APP_BASE_URL:http://localhost:8080}
+  # Set to false in test application properties to disable @Scheduled tasks
+  scheduler:
+    enabled: true
 
 analysis:
   scoring:

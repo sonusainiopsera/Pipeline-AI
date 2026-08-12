@@ -476,3 +476,10 @@
 - **Files:** 10 (+445/-0)
 - **Duration:** 459ss
 - **Approach:** Created EmailService interface and ConsoleEmailService (@Profile('dev')) for token delivery. AuthService implements register (UUID token + 24h expiry + BCrypt password hash), verifyEmail (validates token, checks expiry, activates account), and resendVerification (email-enumeration-safe no-op for unknown/verified). AuthController exposes GET /api/auth/verify and POST /api/auth/verify/resend. Added PasswordEncoder @Bean to SecurityConfig and findByVerificationToken to UserRepository.
+
+## WO-031: User Story: WO-031 - Implement Expired Token Cleanup Scheduler
+- **Status:** completed
+- **Commit:** `060b89e`
+- **Files:** 7 (+297/-1)
+- **Duration:** 320ss
+- **Approach:** Added @ConditionalOnProperty to existing SchedulerConfig so the scheduler can be disabled in test contexts. Created TokenCleanupScheduler with @Scheduled(cron='0 0 2 * * *', zone='UTC') that batch-deletes expired refresh tokens (countByExpiresAtBefore then deleteAllByExpiresAtBefore) and batch-clears expired verification token fields from unverified users via a new @Modifying @Query on UserRepository. Added countByExpiresAtBefore to RefreshTokenRepository for count logging. Added app.scheduler.enabled: true to application.yml with disable instructions.
