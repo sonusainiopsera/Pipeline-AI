@@ -364,3 +364,10 @@
 - **Files:** 6 (+441/-27)
 - **Duration:** 420ss
 - **Approach:** AnalysisRepository.findAllByOrderByCreatedAtDesc(Pageable) and HistoryListDTO were already present from prior WOs, so the work focused on wiring them into the service and controller. AnalysisService.getHistory() changed from returning List<AnalyzedLog> to accepting a Pageable parameter and returning Page<HistoryListDTO> via page.map(HistoryListDTO::from). AnalysisController.getHistory() now accepts @PageableDefault(size=20, sort='createdAt', direction=DESC) Pageable, applies server-side size clamping (>100 → 100) using PageRequest.of(), and returns Page<HistoryListDTO>. application.yml got spring.data.web.pageable.max-page-size=100 as defense-in-depth. The three existing history tests in AnalysisControllerTest were updated to use when(analysisService.getHistory(any(Pageable.class))).thenReturn(new PageImpl<>(...)) and assert against $.content[*] instead of the old $[*] array path. New AnalysisControllerHistoryTest covers 9 pagination scenarios, and AnalysisServiceHistoryTest covers 6 service-layer scenarios with Mockito.
+
+## WO-063: User Story: WO-063 - Provision Grafana Dashboards and Alert Rules
+- **Status:** completed
+- **Commit:** `7c8b990`
+- **Files:** 7 (+840/-1)
+- **Duration:** 353ss
+- **Approach:** Created three Grafana 11.x dashboard JSON files (schemaVersion 39) and one unified alerting YAML provisioned under the existing ./grafana/provisioning volume mount that already covers all subdirectories. Added explicit uid fields (prometheus, loki) to datasources.yml so alert rules and dashboard panels can reference data sources deterministically without relying on Grafana's auto-generated UUIDs. Updated dashboard.yml to set disableDeletion: true (was false). Created grafana/provisioning/alerting/alerts.yml with the three required alert rules using Grafana unified alerting classic_conditions format, plus a default email contact point and routing policy. Added GF_UNIFIED_ALERTING_ENABLED=true and GF_ALERTING_ENABLED=false to the grafana service in docker-compose.yml to activate Grafana 11 unified alerting. All JSON files pass python3 -m json.tool validation.

@@ -1,0 +1,178 @@
+apiVersion: 1
+
+# Contact points — uses Grafana's built-in alertmanager
+contactPoints:
+  - orgId: 1
+    name: default-contact-point
+    receivers:
+      - uid: default-email-receiver
+        type: email
+        settings:
+          addresses: admin@localhost
+          subject: "[Pipeline Assistant] {{ .CommonLabels.alertname }} - {{ .CommonLabels.severity | title }}"
+        disableResolveMessage: false
+
+# Default notification policy — all alerts route to the default contact point
+policies:
+  - orgId: 1
+    receiver: default-contact-point
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+
+# Alert rule groups
+groups:
+  - orgId: 1
+    name: pipeline-assistant
+    folder: Pipeline Assistant Alerts
+    interval: 1m
+    rules:
+      # Rule 1: High Error Rate
+      # Fires when more than 5% of analysis requests result in errors over a 5m window
+      - uid: pipeline-high-error-rate
+        title: High Error Rate
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: rate(analysis_errors_total[5m]) / rate(analysis_requests_total[5m])
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+              instant: false
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: classic_conditions
+              refId: B
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.05
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Error rate exceeds 5% threshold"
+          description: "More than 5% of analysis requests are returning errors. Current rate: {{ $values.A }}."
+          runbook_url: "https://github.com/opsera/pipeline-troubleshooting-assistant/docs/runbooks/high-error-rate.md"
+
+      # Rule 2: High Analysis Latency
+      # Fires when p95 analysis latency exceeds 500ms over a 5m window
+      - uid: pipeline-high-latency
+        title: High Analysis Latency
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.95, sum(rate(analysis_duration_seconds_bucket[5m])) by (le))
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+              instant: false
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: classic_conditions
+              refId: B
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.5
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Analysis p95 latency exceeds 500ms"
+          description: "The 95th percentile analysis latency has exceeded the 500ms SLO threshold. Current p95: {{ $values.A }}s."
+          runbook_url: "https://github.com/opsera/pipeline-troubleshooting-assistant/docs/runbooks/high-latency.md"
+
+      # Rule 3: Backend Down
+      # Fires when the spring-boot job disappears from Prometheus targets for 1m
+      - uid: pipeline-backend-down
+        title: Backend Down
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="spring-boot"}
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+              instant: false
+          - refId: B
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: classic_conditions
+              refId: B
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Pipeline Assistant backend is down"
+          description: "The spring-boot job has been unreachable by Prometheus for more than 1 minute. Check the backend container status."
+          runbook_url: "https://github.com/opsera/pipeline-troubleshooting-assistant/docs/runbooks/backend-down.md"
