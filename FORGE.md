@@ -315,3 +315,10 @@
 - **Files:** 10 (+571/-56)
 - **Duration:** 637ss
 - **Approach:** Created MetricsConfig with a pre-registered Timer bean for analysis.duration (publishPercentileHistogram enabled) and placeholder Counter beans for auth.events (4 event_type values) and cache.operations (2 result values). Services inject MeterRegistry via @RequiredArgsConstructor and record dynamic-tag counters inline. All metric calls are wrapped in try-catch so failures never propagate to callers. Timer.Sample uses Clock.SYSTEM at start so no registry is needed until stop(), placed in a try-finally to guarantee recording even when exceptions occur. Added ResponseStatusException and catch-all Exception handlers to ApiExceptionHandler for complete error coverage.
+
+## WO-068: User Story: WO-068 - Docker Compose Health Checks and Dependency Ordering
+- **Status:** completed
+- **Commit:** `251d87c`
+- **Files:** 1 (+16/-1)
+- **Duration:** 69ss
+- **Approach:** Modified docker-compose.yml to add health checks to backend and frontend services, add start_period to the existing db health check, add restart: unless-stopped to db, and upgrade frontend depends_on from short-form list syntax to long-form condition: service_healthy. The backend was already using condition: service_healthy for db. This enforces a three-stage ordered startup: db healthy → backend starts and becomes healthy → frontend starts.
