@@ -420,3 +420,10 @@
 - **Files:** 6 (+381/-0)
 - **Duration:** 476ss
 - **Approach:** Added HistoryDetailDTO to Responses.java as a new record with all AC3 fields (id, logText, detectedCategory mapped from entity category, rootCause, suggestedFix, customerUpdate, severity, confidence, createdAt) plus a static factory from(AnalyzedLog, String sanitizedLogText). Added historyDetail(Long id) to AnalysisService: uses findById with orElseThrow(ResponseStatusException NOT_FOUND), sanitizes logText via existing logSanitizer bean (null-safe: skips sanitization if logText is null; failure-safe: catches sanitizer exceptions and returns null logText). Added @GetMapping('/history/{id}') to AnalysisController with id <= 0 guard throwing 400 and delegation to analysisService.historyDetail(id). Added MethodArgumentTypeMismatchException handler to ApiExceptionHandler returning HTTP 400 with structured {timestamp, message, status} JSON for non-numeric path variable values (e.g. /api/history/abc). @PreAuthorize placeholder comment added to the service method referencing the Security epic.
+
+## WO-073: User Story: WO-073 - Upgrade Spring Boot 3.3.5 to 3.5.x
+- **Status:** completed
+- **Commit:** `781fd6e`
+- **Files:** 1 (+2/-2)
+- **Duration:** 318ss
+- **Approach:** Upgraded spring-boot-starter-parent from 3.3.5 to 3.5.3 in pom.xml. Reviewed all potential breaking changes from Spring Boot 3.4 and 3.5 migration guides: WebConfig.java uses addCorsMappings() which is not deprecated in 3.5.x; ApiExceptionHandler.java uses HttpStatus.resolve(int) which is not deprecated in Spring Framework 6.2+; application.yml properties (spring.jpa.database-platform, flyway.baseline-on-migrate, spring.data.web.pageable.max-page-size, management.endpoints configuration, jwt/retention/cache properties) all remain valid. One required companion change identified: logstash-logback-encoder was pinned at 7.4 (Logback 1.4.x series), but Spring Boot 3.4+ upgrades the managed Logback version to 1.5.x — logstash-logback-encoder 7.x is not binary compatible with Logback 1.5.x, so it was upgraded to 8.0 which targets Logback 1.5.x. No source code changes were necessary.
