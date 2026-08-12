@@ -1,5 +1,7 @@
 package com.opsera.pipelineassistant.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.pipelineassistant.dto.Responses.LoginResponse;
 import com.opsera.pipelineassistant.dto.Responses.LoginResult;
 import com.opsera.pipelineassistant.dto.Responses.RefreshResult;
@@ -9,7 +11,9 @@ import com.opsera.pipelineassistant.model.RefreshToken;
 import com.opsera.pipelineassistant.model.User;
 import com.opsera.pipelineassistant.repository.RefreshTokenRepository;
 import com.opsera.pipelineassistant.repository.UserRepository;
+import com.opsera.pipelineassistant.security.AesEncryptionUtil;
 import com.opsera.pipelineassistant.security.JwtTokenProvider;
+import com.opsera.pipelineassistant.security.MfaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +27,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -40,6 +46,9 @@ public class AuthService {
     private final EmailService emailService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final MfaService mfaService;
+    private final AesEncryptionUtil aesEncryptionUtil;
+    private final ObjectMapper objectMapper;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationSeconds;
@@ -79,17 +88,143 @@ public class AuthService {
 
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
+
+        if (Boolean.TRUE.equals(user.getMfaEnabled())) {
+            String challengeToken = jwtTokenProvider.generateMfaChallengeToken(normalizedEmail);
+            user.setMfaChallengeTokenHash(hashToken(challengeToken));
+            userRepository.save(user);
+            log.info("MFA challenge issued for '{}'", normalizedEmail);
+            LoginResponse profile = new LoginResponse(
+                    user.getEmail(), user.getDisplayName(), user.getRole().name(), true);
+            return new LoginResult(null, null, profile, challengeToken);
+        }
+
         userRepository.save(user);
 
+        log.info("Login successful for '{}'", normalizedEmail);
+        return issueFullTokens(user);
+    }
+
+    @Transactional
+    public LoginResult verifyMfaChallenge(String challengeToken, String code) {
+        if (!jwtTokenProvider.validateMfaChallengeToken(challengeToken)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Invalid or expired MFA challenge token. Please log in again.");
+        }
+
+        String email = jwtTokenProvider.extractMfaChallengeEmail(challengeToken);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Invalid MFA challenge"));
+
+        String tokenHash = hashToken(challengeToken);
+        if (!tokenHash.equals(user.getMfaChallengeTokenHash())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "MFA challenge token has already been used. Please log in again.");
+        }
+        // Invalidate single-use token before verification to prevent replay regardless of outcome
+        user.setMfaChallengeTokenHash(null);
+        userRepository.save(user);
+
+        String decryptedSecret;
+        try {
+            decryptedSecret = aesEncryptionUtil.decrypt(user.getMfaSecret());
+        } catch (Exception e) {
+            log.error("Failed to decrypt MFA secret for '{}'", email);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "MFA verification failed");
+        }
+
+        if (!mfaService.verifyCode(decryptedSecret, code)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authentication code");
+        }
+
+        log.info("MFA challenge verified for '{}'", email);
+        return issueFullTokens(user);
+    }
+
+    @Transactional
+    public LoginResult verifyMfaRecovery(String challengeToken, String recoveryCode) {
+        if (!jwtTokenProvider.validateMfaChallengeToken(challengeToken)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Invalid or expired MFA challenge token. Please log in again.");
+        }
+
+        String email = jwtTokenProvider.extractMfaChallengeEmail(challengeToken);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Invalid MFA challenge"));
+
+        String tokenHash = hashToken(challengeToken);
+        if (!tokenHash.equals(user.getMfaChallengeTokenHash())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "MFA challenge token has already been used. Please log in again.");
+        }
+        user.setMfaChallengeTokenHash(null);
+
+        if (user.getRecoveryCodes() == null || user.getRecoveryCodes().isBlank()) {
+            userRepository.save(user);
+            throw new ResponseStatusException(HttpStatus.LOCKED,
+                    "No recovery codes available. Please contact your administrator.");
+        }
+
+        List<String> codeHashes;
+        try {
+            codeHashes = new ArrayList<>(objectMapper.readValue(
+                    user.getRecoveryCodes(), new TypeReference<List<String>>() {}));
+        } catch (Exception e) {
+            log.error("Failed to parse recovery codes for '{}'", email);
+            userRepository.save(user);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Recovery code verification failed");
+        }
+
+        String normalizedCode = recoveryCode.trim().toUpperCase();
+        int matchIndex = -1;
+        for (int i = 0; i < codeHashes.size(); i++) {
+            String storedHash = codeHashes.get(i);
+            if (storedHash != null && passwordEncoder.matches(normalizedCode, storedHash)) {
+                matchIndex = i;
+                break;
+            }
+        }
+
+        if (matchIndex == -1) {
+            userRepository.save(user);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid recovery code");
+        }
+
+        codeHashes.set(matchIndex, null);
+        long remaining = codeHashes.stream().filter(c -> c != null).count();
+        if (remaining == 0) {
+            userRepository.save(user);
+            throw new ResponseStatusException(HttpStatus.LOCKED,
+                    "All recovery codes have been used. Please contact your administrator.");
+        }
+
+        try {
+            user.setRecoveryCodes(objectMapper.writeValueAsString(codeHashes));
+        } catch (Exception e) {
+            log.error("Failed to serialize updated recovery codes for '{}'", email);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Recovery code verification failed");
+        }
+
+        userRepository.save(user);
+        log.info("MFA recovery used for '{}' — {} codes remaining", email, remaining);
+        return issueFullTokens(user);
+    }
+
+    private LoginResult issueFullTokens(User user) {
         long sessionCount = refreshTokenRepository.countByUserId(user.getId());
         if (sessionCount >= 3) {
             refreshTokenRepository.findFirstByUserIdOrderByCreatedAtAsc(user.getId())
                     .ifPresent(oldest -> refreshTokenRepository.deleteByTokenHash(oldest.getTokenHash()));
         }
 
-        String accessToken = jwtTokenProvider.generateAccessToken(user);
+        String accessToken    = jwtTokenProvider.generateAccessToken(user);
         String rawRefreshToken = jwtTokenProvider.generateRefreshToken();
-        String tokenHash = hashToken(rawRefreshToken);
+        String tokenHash      = hashToken(rawRefreshToken);
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .user(user)
@@ -97,9 +232,9 @@ public class AuthService {
                 .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpirationSeconds))
                 .build());
 
-        log.info("Login successful for '{}'", normalizedEmail);
-        LoginResponse profile = new LoginResponse(user.getEmail(), user.getDisplayName(), user.getRole().name());
-        return new LoginResult(accessToken, rawRefreshToken, profile);
+        LoginResponse profile = new LoginResponse(
+                user.getEmail(), user.getDisplayName(), user.getRole().name(), false);
+        return new LoginResult(accessToken, rawRefreshToken, profile, null);
     }
 
     @Transactional

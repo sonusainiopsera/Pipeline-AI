@@ -41,6 +41,9 @@ public class JwtTokenProvider {
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationSeconds;
 
+    @Value("${mfa.challenge-token-expiration:300}")
+    private long mfaChallengeTokenExpirationSeconds;
+
     private SecretKey signingKey;
 
     @PostConstruct
@@ -108,6 +111,41 @@ public class JwtTokenProvider {
             log.warn("JWT validation rejected: empty or null claims string");
         }
         return false;
+    }
+
+    /**
+     * Generates a short-lived JWT (5 min by default) that authorises only the MFA verification step.
+     * Carries a {@code type=mfa-challenge} claim so the challenge and access token types
+     * cannot be interchanged.
+     */
+    public String generateMfaChallengeToken(String email) {
+        Date now        = new Date();
+        Date expiration = new Date(now.getTime() + mfaChallengeTokenExpirationSeconds * 1000L);
+
+        return Jwts.builder()
+                .subject(email)
+                .claim("type", "mfa-challenge")
+                .issuedAt(now)
+                .expiration(expiration)
+                .signWith(signingKey)
+                .compact();
+    }
+
+    /**
+     * Returns true only if the token has a valid signature, has not expired, and carries
+     * {@code type=mfa-challenge}. Rejects regular access tokens.
+     */
+    public boolean validateMfaChallengeToken(String token) {
+        if (!validateToken(token)) {
+            return false;
+        }
+        String type = parseClaims(token).get("type", String.class);
+        return "mfa-challenge".equals(type);
+    }
+
+    /** Extracts the email (subject claim) from a validated MFA challenge token. */
+    public String extractMfaChallengeEmail(String token) {
+        return parseClaims(token).getSubject();
     }
 
     /** Extracts the email (subject claim) from a validated token. */

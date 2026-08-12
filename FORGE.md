@@ -546,3 +546,10 @@
 - **Files:** 12 (+1391/-3)
 - **Duration:** 1204ss
 - **Approach:** Created four auth pages following existing component patterns (inline styles using established design tokens, useState hooks, direct api calls). App.tsx uses window.location.pathname to detect auth routes (/login, /register, /mfa/verify, /mfa/enroll) and renders the corresponding page outside the ProtectedRoute/Layout wrapper — consistent with the existing state-based routing architecture (no react-router-dom). QR code is displayed as a copyable text textarea showing the otpauth:// URI, as the WO explicitly allows this alternative. Fixed MfaSetupResponse type to use qrCodeUri (matching WO-028 backend) and updated authResponses fixture. Tests use vi.mock('../api') with Vitest's hoisting to mock the api module and assert rendering, validation, submission, and redirect behavior.
+
+## WO-029: User Story: WO-029 - Enforce MFA Verification During Login Flow
+- **Status:** completed
+- **Commit:** `cd9c791`
+- **Files:** 11 (+726/-9)
+- **Duration:** 889ss
+- **Approach:** Implemented a two-step MFA login flow. AuthService.login() branches on mfaEnabled: MFA-enabled users receive a 5-minute JWT challenge token (set as an mfa_challenge HttpOnly cookie, stored as SHA-256 hash on User.mfaChallengeTokenHash for single-use enforcement) instead of access/refresh tokens. Two new endpoints complete login: POST /mfa/challenge validates the cookie + TOTP code, and POST /mfa/recover validates the cookie + a BCrypt-matched recovery code. Both clear the challenge token hash before verifying to enforce single-use regardless of outcome. JwtTokenProvider gained generateMfaChallengeToken/validateMfaChallengeToken/extractMfaChallengeEmail methods using a type=mfa-challenge claim to distinguish challenge tokens from access tokens. AuthService gained AesEncryptionUtil and ObjectMapper dependencies to decrypt the TOTP secret and parse/update the JSON recovery codes list. Non-MFA users receive full access+refresh tokens with mfaRequired=false in LoginResponse.

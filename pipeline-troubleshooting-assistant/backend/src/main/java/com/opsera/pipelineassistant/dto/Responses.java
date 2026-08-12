@@ -13,9 +13,9 @@ public final class Responses {
 
     public record RefreshResult(String accessToken, String refreshToken) {}
 
-    public record LoginResponse(String email, String displayName, String role) {}
+    public record LoginResponse(String email, String displayName, String role, boolean mfaRequired) {}
 
-    public record LoginResult(String accessToken, String rawRefreshToken, LoginResponse profile) {}
+    public record LoginResult(String accessToken, String rawRefreshToken, LoginResponse profile, String challengeToken) {}
 
     public record MfaSetupResponse(String qrCodeUri, List<String> recoveryCodes) {}
 

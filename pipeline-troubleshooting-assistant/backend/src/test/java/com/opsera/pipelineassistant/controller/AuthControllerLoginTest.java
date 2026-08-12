@@ -8,6 +8,7 @@ import com.opsera.pipelineassistant.exception.EmailNotVerifiedException;
 import com.opsera.pipelineassistant.fixtures.LoginRequestFixtures;
 import com.opsera.pipelineassistant.security.CustomUserDetailsService;
 import com.opsera.pipelineassistant.security.JwtTokenProvider;
+import com.opsera.pipelineassistant.security.MfaService;
 import com.opsera.pipelineassistant.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,9 @@ class AuthControllerLoginTest {
     private AuthService authService;
 
     @MockBean
+    private MfaService mfaService;
+
+    @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
     @MockBean
@@ -47,9 +51,9 @@ class AuthControllerLoginTest {
 
     private static final String URL = "/api/auth/login";
     private static final LoginResponse PROFILE =
-            new LoginResponse("user@example.com", "Test User", "ANALYST");
+            new LoginResponse("user@example.com", "Test User", "ANALYST", false);
     private static final LoginResult SUCCESS_RESULT =
-            new LoginResult("access-jwt", "raw-refresh-token", PROFILE);
+            new LoginResult("access-jwt", "raw-refresh-token", PROFILE, null);
 
     // ── AC1/AC2/AC4: success with cookies ────────────────────────────────────
 

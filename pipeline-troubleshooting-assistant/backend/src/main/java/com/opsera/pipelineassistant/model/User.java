@@ -46,6 +46,9 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String recoveryCodes;
 
+    @Column(length = 64)
+    private String mfaChallengeTokenHash;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean emailVerified = false;

@@ -1,6 +1,8 @@
 package com.opsera.pipelineassistant.controller;
 
 import com.opsera.pipelineassistant.dto.LoginRequest;
+import com.opsera.pipelineassistant.dto.MfaChallengeRequest;
+import com.opsera.pipelineassistant.dto.MfaRecoverRequest;
 import com.opsera.pipelineassistant.dto.MfaVerifyRequest;
 import com.opsera.pipelineassistant.dto.RegisterRequest;
 import com.opsera.pipelineassistant.dto.ResendVerificationRequest;
@@ -23,6 +25,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.util.Map;
@@ -42,11 +45,65 @@ public class AuthController {
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationSeconds;
 
+    @Value("${mfa.challenge-token-expiration:300}")
+    private long mfaChallengeTokenExpirationSeconds;
+
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("POST /api/auth/login");
         LoginResult result = authService.login(request.getEmail(), request.getPassword());
+
+        if (result.challengeToken() != null) {
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE,
+                            buildCookie("mfa_challenge", result.challengeToken(),
+                                    Duration.ofSeconds(mfaChallengeTokenExpirationSeconds), "/api/auth/mfa").toString())
+                    .body(result.profile());
+        }
+
         return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE,
+                        buildCookie("access_token", result.accessToken(),
+                                Duration.ofSeconds(accessTokenExpirationSeconds)).toString())
+                .header(HttpHeaders.SET_COOKIE,
+                        buildCookie("refresh_token", result.rawRefreshToken(),
+                                Duration.ofSeconds(refreshTokenExpirationSeconds), "/api/auth").toString())
+                .body(result.profile());
+    }
+
+    @PostMapping("/mfa/challenge")
+    public ResponseEntity<LoginResponse> mfaChallenge(
+            @CookieValue(value = "mfa_challenge", required = false) String challengeCookie,
+            @Valid @RequestBody MfaChallengeRequest request) {
+        log.info("POST /api/auth/mfa/challenge");
+        if (challengeCookie == null || challengeCookie.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "No MFA challenge in progress. Please log in again.");
+        }
+        LoginResult result = authService.verifyMfaChallenge(challengeCookie, request.getCode());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearCookie("mfa_challenge").toString())
+                .header(HttpHeaders.SET_COOKIE,
+                        buildCookie("access_token", result.accessToken(),
+                                Duration.ofSeconds(accessTokenExpirationSeconds)).toString())
+                .header(HttpHeaders.SET_COOKIE,
+                        buildCookie("refresh_token", result.rawRefreshToken(),
+                                Duration.ofSeconds(refreshTokenExpirationSeconds), "/api/auth").toString())
+                .body(result.profile());
+    }
+
+    @PostMapping("/mfa/recover")
+    public ResponseEntity<LoginResponse> mfaRecover(
+            @CookieValue(value = "mfa_challenge", required = false) String challengeCookie,
+            @Valid @RequestBody MfaRecoverRequest request) {
+        log.info("POST /api/auth/mfa/recover");
+        if (challengeCookie == null || challengeCookie.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "No MFA challenge in progress. Please log in again.");
+        }
+        LoginResult result = authService.verifyMfaRecovery(challengeCookie, request.getRecoveryCode());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearCookie("mfa_challenge").toString())
                 .header(HttpHeaders.SET_COOKIE,
                         buildCookie("access_token", result.accessToken(),
                                 Duration.ofSeconds(accessTokenExpirationSeconds)).toString())
