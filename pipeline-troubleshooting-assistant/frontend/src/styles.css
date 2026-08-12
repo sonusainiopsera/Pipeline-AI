@@ -1,3 +1,36 @@
+/* ─── WCAG AA color palette – all semantic roles in one place ─────────────
+   Contrast ratios verified against WCAG 2.1 AA:
+     Normal text  ≥ 4.5:1
+     Large text   ≥ 3:1
+     UI boundaries ≥ 3:1
+
+   Dark sidebar surface:  #101a2d
+   Main content bg:       #f8fafc (near-white)
+   Card / modal bg:       #ffffff
+
+   --color-text-primary:   #111827  (~18:1 on white)
+   --color-text-secondary: #475569  (~7.6:1 on white, ~6.8:1 on #f8fafc) ✓
+   --color-text-error:     #b91c1c  (~6.5:1 on white, ~6.2:1 on #f8fafc) ✓
+   --color-text-success:   #15803d  (~5.0:1 on white, ~4.8:1 on #f8fafc) ✓
+   --color-border:         #64748b  (~4.2:1 on white, ~4.0:1 on #f8fafc) ✓ 3:1 UI boundary
+   --color-placeholder:    #6b7280  (~4.8:1 on white) ✓
+   ─────────────────────────────────────────────────────────────────────── */
+:root {
+  --color-text-primary:   #111827;
+  --color-text-secondary: #475569;
+  --color-text-error:     #b91c1c;
+  --color-text-success:   #15803d;
+  --color-border:         #64748b;
+  --color-placeholder:    #6b7280;
+}
+
+/* ─── Placeholder text contrast (WCAG AA SC 1.4.3) ──────────────────────── */
+/* #6b7280 gives 4.83:1 on white and 4.62:1 on #f8fafc — passes 4.5:1     */
+::placeholder {
+  color: var(--color-placeholder);
+  opacity: 1; /* Firefox reduces opacity by default */
+}
+
 /* ─── Focus visible ring – WCAG 2.1 AA SC 2.4.7 ─────────────────────────── */
 /* Show a 2px solid #60a5fa ring with 2px offset for all keyboard-focused elements */
 *:focus-visible {

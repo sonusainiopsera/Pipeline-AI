@@ -44,13 +44,21 @@ export default function AnalyzePage() {
           value={logText}
           onChange={(e) => setLogText(e.target.value)}
           rows={10}
-          style={{ width: '100%', fontFamily: 'monospace', boxSizing: 'border-box', padding: '8px' }}
+          style={{
+            width: '100%',
+            fontFamily: 'monospace',
+            boxSizing: 'border-box',
+            padding: '8px',
+            // #64748b border on #fff: ~4.2:1 — passes 3:1 UI boundary ✓
+            border: '1px solid #64748b',
+          }}
           placeholder="Paste your pipeline failure log here..."
           maxLength={MAX_LOG_LENGTH}
           aria-label="Pipeline log input"
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-          <span style={{ fontSize: '0.8em', color: '#666' }}>
+          {/* #475569 on #f8fafc: ~6.8:1 — passes 4.5:1 ✓ */}
+          <span style={{ fontSize: '0.8em', color: '#475569' }}>
             {logText.length.toLocaleString()} / {MAX_LOG_LENGTH.toLocaleString()} characters
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -76,7 +84,8 @@ export default function AnalyzePage() {
       </div>
 
       {error && (
-        <p style={{ color: 'red', marginBottom: '16px' }}>{error}</p>
+        // #b91c1c on #f8fafc: ~6.2:1 — passes 4.5:1 ✓
+        <p role="alert" style={{ color: '#b91c1c', marginBottom: '16px' }}>{error}</p>
       )}
 
       {result && (
@@ -85,7 +94,8 @@ export default function AnalyzePage() {
             <h3 style={{ margin: 0 }}>
               {result.category} — {result.severity}
             </h3>
-            <span style={{ fontSize: '0.9em', color: '#555' }}>
+            {/* #475569 on #f8fafc: ~6.8:1 — passes 4.5:1 ✓ */}
+            <span style={{ fontSize: '0.9em', color: '#475569' }}>
               Confidence: {result.confidence}%
             </span>
           </div>
@@ -96,12 +106,13 @@ export default function AnalyzePage() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '5px',
-              color: '#22c55e',
+              // #15803d on #f8fafc: ~4.8:1 — passes 4.5:1 ✓
+              color: '#15803d',
               fontSize: '0.85em',
               margin: '10px 0 16px',
             }}
           >
-            <Shield size={14} />
+            <Shield size={14} aria-hidden="true" />
             <span>Log sanitized before storage</span>
           </div>
 
@@ -121,7 +132,13 @@ export default function AnalyzePage() {
               value={result.customerUpdate}
               readOnly
               rows={4}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '8px', marginTop: '6px' }}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '8px',
+                marginTop: '6px',
+                border: '1px solid #64748b',
+              }}
               aria-label="Customer update text"
             />
             <button type="button" onClick={handleCopy} style={{ marginTop: '6px' }}>

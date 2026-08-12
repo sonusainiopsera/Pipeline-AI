@@ -42,8 +42,10 @@ export function highlightRedactions(text: string): React.ReactNode[] {
         {
           key: `redact-${match.index}`,
           style: {
-            backgroundColor: 'rgba(168, 85, 247, 0.15)',
-            color: '#a855f7',
+            // #6b21a8 (violet-800) on light-lavender bg: ~5.9:1 — passes 4.5:1 ✓
+            // rgba(107,33,168,0.1) over near-white (~L 0.78) bg gives L≈0.66 effective
+            backgroundColor: 'rgba(107, 33, 168, 0.1)',
+            color: '#6b21a8',
             borderRadius: '3px',
             padding: '1px 5px',
             fontWeight: 700,

@@ -16,7 +16,8 @@ export default function HistoryPage() {
   }, []);
 
   if (loading) return <p>Loading history...</p>;
-  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
+  // #b91c1c on #f8fafc: ~6.2:1 — passes 4.5:1 ✓
+  if (error) return <p role="alert" style={{ color: '#b91c1c' }}>Error: {error}</p>;
   if (logs.length === 0) return <p>No analysis history yet. Analyze your first pipeline log to get started.</p>;
 
   return (
@@ -24,7 +25,11 @@ export default function HistoryPage() {
       <h2>Analysis History</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #ddd' }}>
+          <tr style={{
+            textAlign: 'left',
+            // #64748b on #f8fafc: ~4.0:1 — passes 3:1 UI boundary ✓
+            borderBottom: '2px solid #64748b',
+          }}>
             <th style={{ padding: '8px' }}>Date</th>
             <th style={{ padding: '8px' }}>Category</th>
             <th style={{ padding: '8px' }}>Severity</th>
@@ -35,7 +40,7 @@ export default function HistoryPage() {
         <tbody>
           {logs.map((log) => (
             <React.Fragment key={log.id}>
-              <tr style={{ borderBottom: '1px solid #eee' }}>
+              <tr style={{ borderBottom: '1px solid #64748b' }}>
                 <td style={{ padding: '8px' }}>{new Date(log.createdAt).toLocaleString()}</td>
                 <td style={{ padding: '8px' }}>{log.category}</td>
                 <td style={{ padding: '8px' }}>{log.severity}</td>
@@ -55,7 +60,7 @@ export default function HistoryPage() {
               </tr>
               {expandedId === log.id && (
                 <tr id={`history-detail-${log.id}`}>
-                  <td colSpan={5} style={{ padding: '16px', backgroundColor: '#f9f9f9' }}>
+                  <td colSpan={5} style={{ padding: '16px', backgroundColor: '#f1f5f9' }}>
                     <div style={{ marginBottom: '12px' }}>
                       <strong>Root Cause:</strong>
                       <p style={{ margin: '4px 0' }}>{log.rootCause}</p>

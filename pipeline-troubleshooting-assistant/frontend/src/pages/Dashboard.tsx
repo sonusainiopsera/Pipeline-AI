@@ -36,11 +36,18 @@ export default function DashboardPage() {
             style={{
               padding: '20px',
               borderRadius: '8px',
-              border: '1px solid #e2e8f0',
+              // #64748b border on #fff: ~4.2:1 — passes 3:1 UI boundary ✓
+              border: '1px solid #64748b',
               backgroundColor: '#fff',
             }}
           >
-            <h2 style={{ margin: '0 0 8px', fontSize: '0.95rem', color: '#64748b', fontWeight: 500 }}>
+            <h2 style={{
+              margin: '0 0 8px',
+              fontSize: '0.95rem',
+              // #475569 on #fff: ~7.6:1 — passes 4.5:1 ✓
+              color: '#475569',
+              fontWeight: 500,
+            }}>
               Total Analyses
             </h2>
             <p style={{ margin: 0, fontSize: '2rem', fontWeight: 700 }}>
@@ -52,13 +59,14 @@ export default function DashboardPage() {
             style={{
               padding: '20px',
               borderRadius: '8px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid #64748b',
               backgroundColor: '#fff',
             }}
           >
-            <h2 style={{ margin: '0 0 8px', fontSize: '0.95rem', color: '#64748b', fontWeight: 500 }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: '0.95rem', color: '#475569', fontWeight: 500 }}>
               Getting Started
             </h2>
+            {/* #475569 on #fff: ~7.6:1 — passes 4.5:1 ✓ */}
             <p style={{ margin: 0, fontSize: '0.9em', color: '#475569' }}>
               Paste a pipeline failure log in the Analyze page to get started.
             </p>
