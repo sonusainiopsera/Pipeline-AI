@@ -116,6 +116,33 @@ class AnalysisControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void shouldReturn413WhenLogTextExceedsMaxLength() throws Exception {
+        String oversizedLogText = "a".repeat(100_001);
+        String requestBody = objectMapper.writeValueAsString(Map.of("logText", oversizedLogText));
+
+        mockMvc.perform(post("/api/analyze")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.status").value(413))
+                .andExpect(jsonPath("$.message")
+                        .value("Log text exceeds maximum length of 100,000 characters"));
+    }
+
+    @Test
+    void shouldReturn400WithFieldErrorWhenLogTextIsBlankStructuredResponse() throws Exception {
+        String requestBody = objectMapper.writeValueAsString(Map.of("logText", ""));
+
+        mockMvc.perform(post("/api/analyze")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("logText"));
+    }
+
     // ─── GET /api/history ──────────────────────────────────────────────────────
 
     @Test

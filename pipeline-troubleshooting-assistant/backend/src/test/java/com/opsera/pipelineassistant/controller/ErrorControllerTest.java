@@ -208,4 +208,49 @@ class ErrorControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
+
+    // ── 13. POST /api/errors with category over 80 chars returns 400 ─────────
+    @Test
+    void shouldReturn400WhenCategoryExceedsMaxLength() throws Exception {
+        ErrorRequest request = buildRequest("oom,heap", "a".repeat(81),
+                "Heap exhausted", "Increase Xmx", "HIGH");
+
+        mockMvc.perform(post("/api/errors")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("category"));
+    }
+
+    // ── 14. POST /api/errors with errorPattern over 5000 chars returns 400 ───
+    @Test
+    void shouldReturn400WhenErrorPatternExceedsMaxLength() throws Exception {
+        ErrorRequest request = buildRequest("a".repeat(5_001), "Memory",
+                "Heap exhausted", "Increase Xmx", "HIGH");
+
+        mockMvc.perform(post("/api/errors")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("errorPattern"));
+    }
+
+    // ── 15. PUT /api/errors/{id} with severity over 20 chars returns 400 ─────
+    @Test
+    void shouldReturn400WhenSeverityExceedsMaxLength() throws Exception {
+        ErrorRequest request = buildRequest("oom,heap", "Memory",
+                "Heap exhausted", "Increase Xmx", "a".repeat(21));
+
+        mockMvc.perform(put("/api/errors/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("severity"));
+    }
 }

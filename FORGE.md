@@ -147,3 +147,10 @@
 - **Files:** 1 (+172/-0)
 - **Duration:** 95ss
 - **Approach:** Read DashboardService.java to understand the actual return type (Map<String, Object> with keys totalErrors, analyzedLogs, mostCommonIssue, categoryBreakdown) and repository field names (ErrorRepository, AnalyzedLogRepository). Created a Mockito-based test class using @ExtendWith(MockitoExtension.class), @Mock for both repositories, and @InjectMocks for DashboardService. A buildCategoryCounts helper constructs List<Object[]> from alternating (category, count) pairs to match the native-query return type. Wrote 8 test methods covering all 6 required AC scenarios plus two bonus edge cases (tied counts and Long.MAX_VALUE overflow guard).
+
+## WO-040: User Story: WO-040 - Add Input Size Constraints to AnalyzeRequest DTO
+- **Status:** completed
+- **Commit:** `a1fa5e1`
+- **Files:** 7 (+349/-0)
+- **Duration:** 322ss
+- **Approach:** Added @Size constraints to AnalyzeRequest and ErrorRequest DTOs matching the PRD limits. Created ApiExceptionHandler (@RestControllerAdvice) that intercepts MethodArgumentNotValidException: when a logText @Size violation is detected (by matching the exact message string), it returns HTTP 413 with a structured body; all other validation failures return HTTP 400 with field-level error details. Added spring.servlet.multipart.max-request-size: 2MB and server.tomcat.max-http-form-post-size: 2MB to application.yml as transport-layer defense. Created RequestsValidationTest.java (14 unit tests using Jakarta Validator directly, covering boundary values for all constrained fields). Added 5 new @WebMvcTest integration tests to the existing controller test files to verify 413/400 status codes and response body structure for size violations.
