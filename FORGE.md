@@ -28,3 +28,10 @@
 - **Files:** 2 (+191/-2)
 - **Duration:** 258ss
 - **Approach:** The scaffolded KnowledgeBaseService lacked a findById method and used RuntimeException instead of ResponseStatusException — inconsistent with the WO's described Current Behavior and the acceptance criteria requiring NOT_FOUND status testing. Updated the service to add findById(Long id) throwing ResponseStatusException(NOT_FOUND), then refactored update() and delete() to delegate to findById for consistent 404 handling. Created KnowledgeBaseServiceTest with 9 pure Mockito unit tests covering all CRUD paths, both happy paths and not-found error paths, using ArgumentCaptor to verify field mapping on create and update.
+
+## WO-007: User Story: WO-007 - Integration Tests for ErrorController CRUD Endpoints
+- **Status:** completed
+- **Commit:** `bc78bd8`
+- **Files:** 1 (+211/-0)
+- **Duration:** 208ss
+- **Approach:** Created ErrorControllerTest using @WebMvcTest(ErrorController.class) with @MockBean KnowledgeBaseService and auto-wired MockMvc and ObjectMapper. Wrote 12 tests covering all four CRUD endpoints. Used jsonPath assertions for response body verification, status matchers for HTTP codes, and doThrow/thenThrow with ResponseStatusException(NOT_FOUND) for 404 scenarios. Tested actual controller status codes: POST returns 201 CREATED and DELETE returns 204 NO_CONTENT (matching the @ResponseStatus annotations in ErrorController). No production code was modified.
