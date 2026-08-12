@@ -224,3 +224,10 @@
 - **Files:** 2 (+18/-4)
 - **Duration:** 219ss
 - **Approach:** The CI workflow and JaCoCo plugin configuration already existed from prior work orders but were incomplete for this story's requirements. Two targeted changes were made: (1) pom.xml — replaced the placeholder JaCoCo check execution (BUNDLE element, 0% minimum) with a production gate using PACKAGE element scoped to the service and controller packages with a 0.80 LINE COVEREDRATIO minimum; (2) ci.yml — added --no-transfer-progress to the mvn verify command to reduce log noise, and added an actions/upload-artifact@v4 step to upload backend/target/site/jacoco/ as the 'coverage-report' artifact with 30-day retention and if: always() to ensure the report is available even when tests fail.
+
+## WO-013: User Story: WO-013 - Add Flyway Dependencies and Disable ddl-auto
+- **Status:** completed
+- **Commit:** `1c3e99f`
+- **Files:** 7 (+63/-2)
+- **Duration:** 220ss
+- **Approach:** Added Flyway dependencies (flyway-core and flyway-database-postgresql) to pom.xml with versions managed by the Spring Boot BOM. Removed ddl-auto from base application.yml and moved it to profile-specific files: application-dev.yml (update, for local convenience) and application-prod.yml (validate, for production fail-fast). Added spring.flyway.clean-disabled=true, locations=classpath:db/migration, and baseline-on-migrate=true to base application.yml so Flyway config is active in all profiles. Created the db/migration/ directory with .gitkeep to track it in version control. Updated docker-compose.yml to set SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev} so the dev profile is the default without breaking existing workflows. Created ApplicationContextTest that injects ApplicationContext and asserts it is not null, and verifies the Flyway bean is present in the context.

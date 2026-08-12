@@ -8,10 +8,15 @@ spring:
     password: ${DB_PASSWORD:localdev}
     driver-class-name: org.postgresql.Driver
   jpa:
-    hibernate:
-      ddl-auto: update
+    # ddl-auto is profile-specific: 'update' in dev (application-dev.yml), 'validate' in prod (application-prod.yml)
     show-sql: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    # Prevents DROP/recreate of the entire schema — always disabled regardless of profile
+    clean-disabled: true
+    locations: classpath:db/migration
+    # Allows Flyway to baseline an existing database that pre-dates Flyway adoption
+    baseline-on-migrate: true
   jackson:
     serialization:
       write-dates-as-timestamps: false

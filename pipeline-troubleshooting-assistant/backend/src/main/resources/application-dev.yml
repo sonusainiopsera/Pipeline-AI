@@ -1,0 +1,6 @@
+spring:
+  jpa:
+    hibernate:
+      # Allow Hibernate to auto-update the schema during local development.
+      # Do not use in production — use 'validate' instead (application-prod.yml).
+      ddl-auto: update
