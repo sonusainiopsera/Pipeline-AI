@@ -483,3 +483,10 @@
 - **Files:** 7 (+297/-1)
 - **Duration:** 320ss
 - **Approach:** Added @ConditionalOnProperty to existing SchedulerConfig so the scheduler can be disabled in test contexts. Created TokenCleanupScheduler with @Scheduled(cron='0 0 2 * * *', zone='UTC') that batch-deletes expired refresh tokens (countByExpiresAtBefore then deleteAllByExpiresAtBefore) and batch-clears expired verification token fields from unverified users via a new @Modifying @Query on UserRepository. Added countByExpiresAtBefore to RefreshTokenRepository for count logging. Added app.scheduler.enabled: true to application.yml with disable instructions.
+
+## WO-023: User Story: WO-023 - Implement User Registration Endpoint
+- **Status:** completed
+- **Commit:** `2d81789`
+- **Files:** 9 (+406/-9)
+- **Duration:** 341ss
+- **Approach:** Added POST /api/auth/register to the existing AuthController (from WO-030). AuthService.register() was updated to normalize email to lowercase/trim, validate password complexity via regex (uppercase, lowercase, digit, special char, min 12 chars), and return a 409 with an enumeration-safe generic message for duplicate emails. BCryptPasswordEncoder upgraded to cost-12. RegisterRequest DTO with @Email/@NotBlank/@Size/@Pattern, RegisterResponse in Responses.java. AuthServiceVerificationTest updated to use valid passwords after complexity validation was added.

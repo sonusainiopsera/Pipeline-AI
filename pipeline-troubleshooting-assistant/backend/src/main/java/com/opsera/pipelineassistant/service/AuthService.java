@@ -12,11 +12,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AuthService {
+
+    private static final Pattern PASSWORD_COMPLEXITY =
+            Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z0-9]).+$");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -24,20 +28,29 @@ public class AuthService {
 
     @Transactional
     public User register(String email, String password, String displayName) {
-        if (userRepository.existsByEmail(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
+        String normalizedEmail = email.trim().toLowerCase();
+
+        if (password.length() < 12 || !PASSWORD_COMPLEXITY.matcher(password).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character");
         }
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Registration could not be completed. Please try a different email.");
+        }
+
         String token = UUID.randomUUID().toString();
         User user = User.builder()
-                .email(email)
+                .email(normalizedEmail)
                 .passwordHash(passwordEncoder.encode(password))
                 .displayName(displayName)
                 .verificationToken(token)
                 .verificationTokenExpiry(LocalDateTime.now().plusHours(24))
                 .build();
         User saved = userRepository.save(user);
-        emailService.sendVerificationEmail(email, token);
-        log.info("Registered user '{}' — verification email dispatched", email);
+        emailService.sendVerificationEmail(normalizedEmail, token);
+        log.info("Registered user '{}' — verification email dispatched", normalizedEmail);
         return saved;
     }
 

@@ -1,10 +1,13 @@
 package com.opsera.pipelineassistant.controller;
 
+import com.opsera.pipelineassistant.dto.RegisterRequest;
 import com.opsera.pipelineassistant.dto.ResendVerificationRequest;
+import com.opsera.pipelineassistant.dto.Responses.RegisterResponse;
 import com.opsera.pipelineassistant.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +20,14 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
+        log.info("POST /api/auth/register");
+        authService.register(request.getEmail(), request.getPassword(), request.getDisplayName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new RegisterResponse("Registration successful. Please verify your email."));
+    }
 
     @GetMapping("/verify")
     public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam String token) {

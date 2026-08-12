@@ -55,10 +55,10 @@ class AuthServiceVerificationTest {
     @Test
     void register_generatesTokenAndCallsEmailService() {
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("pass")).thenReturn("hashed");
+        when(passwordEncoder.encode("ValidPass123!")).thenReturn("hashed");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        authService.register("new@example.com", "pass", "New User");
+        authService.register("new@example.com", "ValidPass123!", "New User");
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
@@ -78,7 +78,7 @@ class AuthServiceVerificationTest {
     void register_duplicateEmail_throwsConflict() {
         when(userRepository.existsByEmail("dupe@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.register("dupe@example.com", "pass", "Name"))
+        assertThatThrownBy(() -> authService.register("dupe@example.com", "ValidPass123!", "Name"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.CONFLICT));

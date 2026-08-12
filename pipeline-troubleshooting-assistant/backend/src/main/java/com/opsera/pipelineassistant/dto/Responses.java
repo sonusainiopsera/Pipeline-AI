@@ -9,6 +9,8 @@ public final class Responses {
 
     private Responses() {}
 
+    public record RegisterResponse(String message) {}
+
     /**
      * Lightweight projection of AnalyzedLog for the history list endpoint.
      * Intentionally excludes logText and customerUpdate per data classification policy
