@@ -5,6 +5,7 @@ import DashboardPage from './pages/Dashboard';
 import AnalyzePage from './pages/Analyze';
 import KnowledgeBasePage from './pages/KnowledgeBase';
 import HistoryPage from './pages/History';
+import { AuthProvider } from './contexts/AuthContext';
 
 export default function App() {
   const [page, setPage] = useState<Page>('analyze');
@@ -23,12 +24,12 @@ export default function App() {
   };
 
   return (
-    <>
+    <AuthProvider>
       {/* Announces page transitions to screen readers and updates document.title */}
       <RouteAnnouncer page={page} />
       <Layout page={page} onNavigate={setPage}>
         {renderPage()}
       </Layout>
-    </>
+    </AuthProvider>
   );
 }

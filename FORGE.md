@@ -497,3 +497,10 @@
 - **Files:** 5 (+491/-0)
 - **Duration:** 321ss
 - **Approach:** Added refresh() and logout() to AuthService with SHA-256 hashing via MessageDigest. refresh() verifies the stored hash, checks expiry (deletes+401 if expired), generates new access+refresh tokens via JwtTokenProvider, rotates the DB record (delete-then-save). logout() is a best-effort delete that catches all exceptions. AuthController wraps refresh() in try-catch to ensure 401+cookie-clearing on any service error. logout() always returns 200 with Max-Age=0 cookies. RefreshResult(accessToken, refreshToken) record added to Responses.java.
+
+## WO-032: User Story: WO-032 - Update Frontend API Client for Authentication
+- **Status:** completed
+- **Commit:** `60d059b`
+- **Files:** 7 (+669/-90)
+- **Duration:** 294ss
+- **Approach:** Refactored api.ts to use a central request<T>() helper that adds credentials:'include' to every fetch call. Implemented a 401 interceptor with isRefreshing flag and refreshQueue array: on 401, one refresh attempt is made; concurrent requests queue and wait for the result; success drains the queue with retries, failure drains with rejections and redirects to /login. Auth endpoints are excluded from the refresh loop. Added type-safe auth functions (login, register, verifyEmail, logout, refreshToken, mfaSetup, mfaVerify, mfaChallenge, mfaRecover, getMe). Created AuthContext with user/isAuthenticated/isLoading state and AuthProvider that calls checkAuth on mount. Added ProtectedRoute and wrapped App with AuthProvider.
