@@ -1,0 +1,2 @@
+# Local environment file — contains real credentials, never commit
+.env

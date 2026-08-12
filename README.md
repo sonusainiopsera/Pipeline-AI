@@ -31,6 +31,32 @@ pipeline-troubleshooting-assistant/
 - Maven 3.8+
 - Docker & Docker Compose
 
+### Environment Setup (required before first run)
+
+All credentials are stored in a git-ignored `.env` file — no secrets are committed to version control.
+
+```bash
+cd pipeline-troubleshooting-assistant
+cp .env.example .env
+# Edit .env and replace placeholder values with real credentials
+```
+
+The `.env` file must define:
+
+| Variable | Description |
+|----------|-------------|
+| `POSTGRES_DB` | PostgreSQL database name |
+| `POSTGRES_USER` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `DB_URL` | JDBC URL for the backend (e.g. `jdbc:postgresql://db:5432/pipelinedb`) |
+| `DB_USERNAME` | Spring datasource username (matches `POSTGRES_USER`) |
+| `DB_PASSWORD` | Spring datasource password (matches `POSTGRES_PASSWORD`) |
+| `APP_CORS_ALLOWED_ORIGINS` | Allowed CORS origins (e.g. `http://localhost:5173`) |
+
+Docker Compose reads `.env` automatically from the same directory as `docker-compose.yml`. If any required variable is missing, the startup will fail with an explicit error message.
+
+For CI/CD pipelines without a `.env` file, set the variables directly in the runner environment instead.
+
 ### Running with Docker Compose
 
 ```bash

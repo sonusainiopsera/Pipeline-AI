@@ -35,3 +35,10 @@
 - **Files:** 1 (+211/-0)
 - **Duration:** 208ss
 - **Approach:** Created ErrorControllerTest using @WebMvcTest(ErrorController.class) with @MockBean KnowledgeBaseService and auto-wired MockMvc and ObjectMapper. Wrote 12 tests covering all four CRUD endpoints. Used jsonPath assertions for response body verification, status matchers for HTTP codes, and doThrow/thenThrow with ResponseStatusException(NOT_FOUND) for 404 scenarios. Tested actual controller status codes: POST returns 201 CREATED and DELETE returns 204 NO_CONTENT (matching the @ResponseStatus annotations in ErrorController). No production code was modified.
+
+## WO-010: User Story: WO-010 - Externalize Database Credentials via Environment Variables
+- **Status:** completed
+- **Commit:** `607bca5`
+- **Files:** 5 (+73/-10)
+- **Duration:** 289ss
+- **Approach:** Externalized all database and CORS credentials from version-controlled files into a git-ignored .env file. Created .env.example with placeholder values as the onboarding template. Used Docker Compose required-variable syntax (${VAR:?error}) for the six sensitive credential variables so startup fails fast and explicitly if .env is missing. Used safe fallback (localdev) in application.yml defaults to clearly distinguish local-dev defaults from production values. Added a project-level .gitignore as a belt-and-suspenders guard on top of the root .gitignore.
