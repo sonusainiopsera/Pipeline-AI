@@ -343,3 +343,10 @@
 - **Files:** 4 (+106/-0)
 - **Duration:** 215ss
 - **Approach:** Added all required security dependencies to pom.xml (spring-boot-starter-security, jjwt-api/impl/jackson 0.12.6 with impl and jackson as runtime scope, spring-security-test for test scope). Created SecurityConfig.java in the existing config package with @Configuration @EnableWebSecurity that defines a SecurityFilterChain bean — CSRF disabled (REST API), sessions set to STATELESS, CORS delegated to the existing WebConfig WebMvcConfigurer via Customizer.withDefaults(), and all requests permitted (anyRequest().permitAll()) as the auth-optional transitional state. Added JWT placeholder properties to application.yml under the jwt prefix with environment variable resolution and safe defaults. Created SecurityConfigTest following the CacheConfigTest pattern to verify the SecurityFilterChain bean loads in the Spring context with the test profile.
+
+## WO-049: User Story: WO-049 - Expose Cache Hit Rate via Actuator Metrics
+- **Status:** completed
+- **Commit:** `b0b0e3a`
+- **Files:** 4 (+119/-2)
+- **Duration:** 391ss
+- **Approach:** Added .recordStats() to the Caffeine.newBuilder() chain in CacheConfig.java — this single call enables hit/miss/eviction/size statistics which Spring Boot's CaffeineCacheMeterBinder auto-detects and registers with Micrometer. Added 'caches' to management.endpoints.web.exposure.include alongside the existing 'metrics' entry. Extended CacheConfigTest with a stats recording verification test that triggers a getIfPresent miss and asserts missCount >= 1 on the native Caffeine cache. Created CacheMetricsIntegrationTest that clears the cache before each test, performs POST /api/analyze requests to drive cache activity, then queries /actuator/metrics/cache.gets with cache:knowledgeBase and result:miss or result:hit tags to verify counts via JSONPath assertions.

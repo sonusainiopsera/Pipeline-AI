@@ -61,7 +61,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics,loggers
+        include: health,info,prometheus,metrics,loggers,caches
   metrics:
     tags:
       application: pipeline-assistant
