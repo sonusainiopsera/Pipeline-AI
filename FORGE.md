@@ -490,3 +490,10 @@
 - **Files:** 9 (+406/-9)
 - **Duration:** 341ss
 - **Approach:** Added POST /api/auth/register to the existing AuthController (from WO-030). AuthService.register() was updated to normalize email to lowercase/trim, validate password complexity via regex (uppercase, lowercase, digit, special char, min 12 chars), and return a 409 with an enumeration-safe generic message for duplicate emails. BCryptPasswordEncoder upgraded to cost-12. RegisterRequest DTO with @Email/@NotBlank/@Size/@Pattern, RegisterResponse in Responses.java. AuthServiceVerificationTest updated to use valid passwords after complexity validation was added.
+
+## WO-025: User Story: WO-025 - Implement Token Refresh and Logout Endpoints
+- **Status:** completed
+- **Commit:** `a431800`
+- **Files:** 5 (+491/-0)
+- **Duration:** 321ss
+- **Approach:** Added refresh() and logout() to AuthService with SHA-256 hashing via MessageDigest. refresh() verifies the stored hash, checks expiry (deletes+401 if expired), generates new access+refresh tokens via JwtTokenProvider, rotates the DB record (delete-then-save). logout() is a best-effort delete that catches all exceptions. AuthController wraps refresh() in try-catch to ensure 401+cookie-clearing on any service error. logout() always returns 200 with Max-Age=0 cookies. RefreshResult(accessToken, refreshToken) record added to Responses.java.

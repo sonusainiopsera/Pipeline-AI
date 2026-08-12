@@ -1,16 +1,25 @@
 package com.opsera.pipelineassistant.service;
 
+import com.opsera.pipelineassistant.dto.Responses.RefreshResult;
+import com.opsera.pipelineassistant.model.RefreshToken;
 import com.opsera.pipelineassistant.model.User;
+import com.opsera.pipelineassistant.repository.RefreshTokenRepository;
 import com.opsera.pipelineassistant.repository.UserRepository;
+import com.opsera.pipelineassistant.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -25,6 +34,11 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
+
+    @Value("${jwt.refresh-token-expiration}")
+    private long refreshTokenExpirationSeconds;
 
     @Transactional
     public User register(String email, String password, String displayName) {
@@ -74,6 +88,54 @@ public class AuthService {
     }
 
     @Transactional
+    public RefreshResult refresh(String rawRefreshToken) {
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Session expired. Please log in again.");
+        }
+
+        String hash = hashToken(rawRefreshToken);
+        RefreshToken stored = refreshTokenRepository.findByTokenHash(hash)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Session expired. Please log in again."));
+
+        if (stored.getExpiresAt().isBefore(LocalDateTime.now())) {
+            refreshTokenRepository.deleteByTokenHash(hash);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Session expired. Please log in again.");
+        }
+
+        User user = stored.getUser();
+        String newAccessToken = jwtTokenProvider.generateAccessToken(user);
+        String newRawRefreshToken = jwtTokenProvider.generateRefreshToken();
+        String newHash = hashToken(newRawRefreshToken);
+
+        refreshTokenRepository.deleteByTokenHash(hash);
+        refreshTokenRepository.save(RefreshToken.builder()
+                .user(user)
+                .tokenHash(newHash)
+                .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpirationSeconds))
+                .build());
+
+        log.debug("Refresh token rotated for user '{}'", user.getEmail());
+        return new RefreshResult(newAccessToken, newRawRefreshToken);
+    }
+
+    @Transactional
+    public void logout(String rawRefreshToken) {
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            return;
+        }
+        try {
+            String hash = hashToken(rawRefreshToken);
+            refreshTokenRepository.deleteByTokenHash(hash);
+            log.debug("Refresh token invalidated on logout");
+        } catch (Exception e) {
+            log.warn("Logout token cleanup failed: {}", e.getMessage());
+        }
+    }
+
+    @Transactional
     public void resendVerification(String email) {
         userRepository.findByEmail(email).ifPresent(user -> {
             if (Boolean.TRUE.equals(user.getEmailVerified())) {
@@ -86,5 +148,15 @@ public class AuthService {
             emailService.sendVerificationEmail(email, token);
             log.info("Resent verification email to '{}'", email);
         });
+    }
+
+    String hashToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 }

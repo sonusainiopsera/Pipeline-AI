@@ -11,6 +11,8 @@ public final class Responses {
 
     public record RegisterResponse(String message) {}
 
+    public record RefreshResult(String accessToken, String refreshToken) {}
+
     /**
      * Lightweight projection of AnalyzedLog for the history list endpoint.
      * Intentionally excludes logText and customerUpdate per data classification policy
