@@ -1,6 +1,7 @@
 package com.opsera.pipelineassistant.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opsera.pipelineassistant.dto.Responses.HistoryListDTO;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.service.AnalysisService;
 import com.opsera.pipelineassistant.service.DashboardService;
@@ -8,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -16,6 +19,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -195,39 +199,32 @@ class AnalysisControllerTest {
 
     @Test
     void shouldReturnHistoryList() throws Exception {
-        AnalyzedLog log1 = AnalyzedLog.builder()
-                .id(1L)
-                .category("Memory")
-                .severity("HIGH")
-                .confidence(98)
-                .build();
-        AnalyzedLog log2 = AnalyzedLog.builder()
-                .id(2L)
-                .category("Network")
-                .severity("HIGH")
-                .confidence(85)
-                .build();
+        HistoryListDTO dto1 = new HistoryListDTO(1L, "Memory", "Heap exhausted", "Increase -Xmx", "HIGH", 98, null);
+        HistoryListDTO dto2 = new HistoryListDTO(2L, "Network", "Timeout", "Check network", "HIGH", 85, null);
 
-        when(analysisService.getHistory()).thenReturn(List.of(log1, log2));
+        when(analysisService.getHistory(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(dto1, dto2)));
 
         mockMvc.perform(get("/api/history"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].id", is(1)))
-                .andExpect(jsonPath("$[0].category", is("Memory")))
-                .andExpect(jsonPath("$[1].id", is(2)))
-                .andExpect(jsonPath("$[1].category", is("Network")));
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].id", is(1)))
+                .andExpect(jsonPath("$.content[0].detectedCategory", is("Memory")))
+                .andExpect(jsonPath("$.content[1].id", is(2)))
+                .andExpect(jsonPath("$.content[1].detectedCategory", is("Network")));
     }
 
     @Test
     void shouldReturnEmptyHistoryList() throws Exception {
-        when(analysisService.getHistory()).thenReturn(List.of());
+        when(analysisService.getHistory(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/api/history"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.content", hasSize(0)))
+                .andExpect(jsonPath("$.totalElements", is(0)));
     }
 
     // ─── GET /api/dashboard ────────────────────────────────────────────────────
@@ -272,7 +269,7 @@ class AnalysisControllerTest {
 
     @Test
     void shouldReturnJsonContentTypeForHistoryAndDashboard() throws Exception {
-        when(analysisService.getHistory()).thenReturn(List.of());
+        when(analysisService.getHistory(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
         when(dashboardService.getStats()).thenReturn(Map.of(
                 "totalErrors", 0,
                 "analyzedLogs", 0,

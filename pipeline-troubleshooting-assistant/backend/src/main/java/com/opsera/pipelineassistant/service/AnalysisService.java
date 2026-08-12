@@ -4,6 +4,7 @@ import com.opsera.pipelineassistant.analysis.PatternMatcher;
 import com.opsera.pipelineassistant.analysis.ResponseTemplater;
 import com.opsera.pipelineassistant.analysis.ScoredMatch;
 import com.opsera.pipelineassistant.analysis.ScoringEngine;
+import com.opsera.pipelineassistant.dto.Responses.HistoryListDTO;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
@@ -12,6 +13,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -121,7 +124,8 @@ public class AnalysisService {
         }
     }
 
-    public List<AnalyzedLog> getHistory() {
-        return analyzedLogRepository.findTop50ByOrderByCreatedAtDesc();
+    public Page<HistoryListDTO> getHistory(Pageable pageable) {
+        return analyzedLogRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(HistoryListDTO::from);
     }
 }

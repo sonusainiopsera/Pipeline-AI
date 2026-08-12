@@ -20,6 +20,10 @@ spring:
   jackson:
     serialization:
       write-dates-as-timestamps: false
+  data:
+    web:
+      pageable:
+        max-page-size: 100
   servlet:
     multipart:
       max-request-size: 2MB
