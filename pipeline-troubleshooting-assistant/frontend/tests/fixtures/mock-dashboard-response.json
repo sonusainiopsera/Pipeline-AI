@@ -1,0 +1,22 @@
+{
+  "totalErrors": 42,
+  "analyzedLogs": 128,
+  "mostCommonIssue": "Docker Issues",
+  "categoryBreakdown": {
+    "Docker Issues": 45,
+    "Network Timeout": 30,
+    "Memory Leak": 22,
+    "Build Failure": 18,
+    "Auth Error": 13
+  },
+  "averageConfidence": 87,
+  "analysesLast7Days": 15,
+  "analysesLast30Days": 61,
+  "topCategories": [
+    { "category": "Docker Issues", "count": 45, "percentage": 35.2 },
+    { "category": "Network Timeout", "count": 30, "percentage": 23.4 },
+    { "category": "Memory Leak", "count": 22, "percentage": 17.2 },
+    { "category": "Build Failure", "count": 18, "percentage": 14.1 },
+    { "category": "Auth Error", "count": 13, "percentage": 10.1 }
+  ]
+}

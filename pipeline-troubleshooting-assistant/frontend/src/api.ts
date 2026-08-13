@@ -1,128 +1,336 @@
-export interface HistoryListItem {
-  id: number;
-  detectedCategory: string;
-  rootCause: string;
-  suggestedFix: string;
-  severity: string;
-  confidence: number;
-  createdAt: string;
-}
+import type {
+  AnalyzedLog,
+  AuditLogEntry,
+  AuditLogPage,
+  AuthMessageResponse,
+  CategoryStat,
+  ChangePasswordRequest,
+  DashboardData,
+  HistoryItem,
+  HistoryListItem,
+  KnowledgeBaseEntry,
+  KnowledgeBaseRequest,
+  LoginRequest,
+  LoginResponse,
+  MfaChallengeRequest,
+  MfaRecoverRequest,
+  MfaSetupResponse,
+  MfaVerifyRequest,
+  PageResponse,
+  RegisterRequest,
+  SessionInfo,
+  UpdateProfileRequest,
+  UserProfile,
+  UserRole,
+} from './types';
 
-export interface HistoryItem {
-  id: number;
-  logText: string | null;
-  detectedCategory: string;
-  rootCause: string;
-  suggestedFix: string;
-  customerUpdate: string;
-  severity: string;
-  confidence: number;
-  createdAt: string;
-}
-
-export interface PageResponse<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
-  first: boolean;
-  last: boolean;
-  empty: boolean;
-}
-
-export interface AnalyzedLog {
-  id: number;
-  logText?: string;
-  category: string;
-  rootCause: string;
-  suggestedFix: string;
-  customerUpdate: string;
-  severity: string;
-  confidence: number;
-  createdAt: string;
-  matchedPatterns?: string[];
-}
-
-export interface KnowledgeBaseEntry {
-  id: number;
-  errorPattern: string;
-  category: string;
-  rootCause: string;
-  solution: string;
-  severity: string;
-}
-
-export interface KnowledgeBaseRequest {
-  errorPattern: string;
-  category: string;
-  rootCause: string;
-  solution: string;
-  severity: string;
-}
+export type {
+  AnalyzedLog,
+  AuditLogEntry,
+  AuditLogPage,
+  AuthMessageResponse,
+  CategoryStat,
+  ChangePasswordRequest,
+  DashboardData,
+  HistoryItem,
+  HistoryListItem,
+  KnowledgeBaseEntry,
+  KnowledgeBaseRequest,
+  LoginRequest,
+  LoginResponse,
+  MfaChallengeRequest,
+  MfaRecoverRequest,
+  MfaSetupResponse,
+  MfaVerifyRequest,
+  PageResponse,
+  RegisterRequest,
+  SessionInfo,
+  UpdateProfileRequest,
+  UserProfile,
+  UserRole,
+};
 
 const BASE = '/api';
 
-export async function analyze(logText: string): Promise<AnalyzedLog> {
-  const res = await fetch(`${BASE}/analyze`, {
+// ── 401 refresh interceptor state ─────────────────────────────────────────────
+
+let isRefreshing = false;
+let refreshQueue: Array<(succeeded: boolean) => void> = [];
+
+function drainQueue(succeeded: boolean): void {
+  const queue = refreshQueue;
+  refreshQueue = [];
+  isRefreshing = false;
+  queue.forEach(cb => cb(succeeded));
+}
+
+async function attemptRefresh(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ── Core request helper ────────────────────────────────────────────────────────
+
+async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers ?? {}),
+    },
+  });
+
+  if (res.status === 401) {
+    // Never intercept the refresh endpoint itself — prevents infinite loop
+    if (url.includes('/auth/refresh') || url.includes('/auth/login')) {
+      throw new ApiError(401, 'Unauthorized');
+    }
+    return handle401<T>(url, options);
+  }
+
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body.message) message = body.message;
+    } catch {
+      // ignore parse errors
+    }
+    throw new ApiError(res.status, message);
+  }
+
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+async function handle401<T>(url: string, options: RequestInit): Promise<T> {
+  if (isRefreshing) {
+    return new Promise<T>((resolve, reject) => {
+      refreshQueue.push(succeeded => {
+        if (succeeded) {
+          request<T>(url, options).then(resolve).catch(reject);
+        } else {
+          reject(new ApiError(401, 'Session expired. Please log in again.'));
+        }
+      });
+    });
+  }
+
+  isRefreshing = true;
+  const refreshed = await attemptRefresh();
+
+  if (refreshed) {
+    drainQueue(true);
+    return request<T>(url, options);
+  } else {
+    drainQueue(false);
+    window.location.href = '/login';
+    throw new ApiError(401, 'Session expired. Please log in again.');
+  }
+}
+
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+// ── Auth endpoints ─────────────────────────────────────────────────────────────
+
+export async function login(credentials: LoginRequest): Promise<LoginResponse> {
+  return request<LoginResponse>(`${BASE}/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+}
+
+export async function register(data: RegisterRequest): Promise<AuthMessageResponse> {
+  return request<AuthMessageResponse>(`${BASE}/auth/register`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function verifyEmail(token: string): Promise<AuthMessageResponse> {
+  return request<AuthMessageResponse>(`${BASE}/auth/verify?token=${encodeURIComponent(token)}`);
+}
+
+export async function resendVerification(email: string): Promise<AuthMessageResponse> {
+  return request<AuthMessageResponse>(`${BASE}/auth/verify/resend`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function refreshToken(): Promise<AuthMessageResponse> {
+  return request<AuthMessageResponse>(`${BASE}/auth/refresh`, {
+    method: 'POST',
+  });
+}
+
+export async function logout(): Promise<AuthMessageResponse> {
+  return request<AuthMessageResponse>(`${BASE}/auth/logout`, {
+    method: 'POST',
+  });
+}
+
+export async function getMe(): Promise<LoginResponse> {
+  return request<LoginResponse>(`${BASE}/auth/me`);
+}
+
+export async function getUserRole(): Promise<UserRole | null> {
+  try {
+    const profile = await getProfile();
+    return (profile.role as UserRole) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ── User profile endpoints ─────────────────────────────────────────────────────
+
+export async function getProfile(): Promise<UserProfile> {
+  return request<UserProfile>(`${BASE}/users/me`);
+}
+
+export async function updateProfile(data: UpdateProfileRequest): Promise<UserProfile> {
+  return request<UserProfile>(`${BASE}/users/me`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
+  return request<{ message: string }>(`${BASE}/users/me/change-password`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getSessions(): Promise<SessionInfo[]> {
+  return request<SessionInfo[]>(`${BASE}/users/me/sessions`);
+}
+
+export async function revokeSession(sessionId: string): Promise<void> {
+  return request<void>(`${BASE}/users/me/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function mfaSetup(): Promise<MfaSetupResponse> {
+  return request<MfaSetupResponse>(`${BASE}/auth/mfa/setup`, { method: 'POST' });
+}
+
+export async function mfaVerify(data: MfaVerifyRequest): Promise<AuthMessageResponse> {
+  return request<AuthMessageResponse>(`${BASE}/auth/mfa/verify`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function mfaChallenge(data: MfaChallengeRequest): Promise<LoginResponse> {
+  return request<LoginResponse>(`${BASE}/auth/mfa/challenge`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function mfaRecover(data: MfaRecoverRequest): Promise<LoginResponse> {
+  return request<LoginResponse>(`${BASE}/auth/mfa/recover`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// ── Dashboard endpoints ────────────────────────────────────────────────────────
+
+export async function getDashboard(): Promise<DashboardData> {
+  return request<DashboardData>(`${BASE}/dashboard`);
+}
+
+// ── Analysis endpoints ─────────────────────────────────────────────────────────
+
+export async function analyze(logText: string): Promise<AnalyzedLog> {
+  return request<AnalyzedLog>(`${BASE}/analyze`, {
+    method: 'POST',
     body: JSON.stringify({ logText }),
   });
-  if (!res.ok) throw new Error(`Analysis failed: ${res.statusText}`);
-  return res.json() as Promise<AnalyzedLog>;
 }
 
 export async function getHistory(): Promise<AnalyzedLog[]> {
-  const res = await fetch(`${BASE}/history`);
-  if (!res.ok) throw new Error(`Failed to fetch history: ${res.statusText}`);
-  return res.json() as Promise<AnalyzedLog[]>;
+  return request<AnalyzedLog[]>(`${BASE}/history`);
 }
 
 export async function history(page = 0, size = 20): Promise<PageResponse<HistoryListItem>> {
-  const res = await fetch(`${BASE}/history?page=${page}&size=${size}`);
-  if (!res.ok) throw new Error(`Failed to fetch history: ${res.statusText}`);
-  return res.json() as Promise<PageResponse<HistoryListItem>>;
+  return request<PageResponse<HistoryListItem>>(`${BASE}/history?page=${page}&size=${size}`);
 }
 
 export async function historyDetail(id: number): Promise<HistoryItem> {
-  const res = await fetch(`${BASE}/history/${id}`);
-  if (!res.ok) throw new Error(`Failed to fetch history detail: ${res.statusText}`);
-  return res.json() as Promise<HistoryItem>;
+  return request<HistoryItem>(`${BASE}/history/${id}`);
 }
 
+// ── Knowledge base endpoints ───────────────────────────────────────────────────
+
 export async function getKnowledgeBase(): Promise<KnowledgeBaseEntry[]> {
-  const res = await fetch(`${BASE}/errors`);
-  if (!res.ok) throw new Error(`Failed to fetch knowledge base: ${res.statusText}`);
-  return res.json() as Promise<KnowledgeBaseEntry[]>;
+  return request<KnowledgeBaseEntry[]>(`${BASE}/errors`);
 }
 
 export async function createKnowledgeBaseEntry(
   data: KnowledgeBaseRequest,
 ): Promise<KnowledgeBaseEntry> {
-  const res = await fetch(`${BASE}/errors`, {
+  return request<KnowledgeBaseEntry>(`${BASE}/errors`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Failed to create entry: ${res.statusText}`);
-  return res.json() as Promise<KnowledgeBaseEntry>;
 }
 
 export async function updateKnowledgeBaseEntry(
   id: number,
   data: KnowledgeBaseRequest,
 ): Promise<KnowledgeBaseEntry> {
-  const res = await fetch(`${BASE}/errors/${id}`, {
+  return request<KnowledgeBaseEntry>(`${BASE}/errors/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Failed to update entry: ${res.statusText}`);
-  return res.json() as Promise<KnowledgeBaseEntry>;
 }
 
 export async function deleteKnowledgeBaseEntry(id: number): Promise<void> {
-  const res = await fetch(`${BASE}/errors/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`Failed to delete entry: ${res.statusText}`);
+  return request<void>(`${BASE}/errors/${id}`, { method: 'DELETE' });
+}
+
+// ── Audit log endpoints ────────────────────────────────────────────────────────
+
+export interface AuditLogFilters {
+  action?: string;
+  resourceType?: string;
+  actorEmail?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<AuditLogPage> {
+  const params = new URLSearchParams();
+  if (filters.action) params.set('action', filters.action);
+  if (filters.resourceType) params.set('resourceType', filters.resourceType);
+  if (filters.actorEmail) params.set('actorEmail', filters.actorEmail);
+  if (filters.startDate) params.set('startDate', filters.startDate);
+  if (filters.endDate) params.set('endDate', filters.endDate);
+  if (filters.page !== undefined) params.set('page', String(filters.page));
+  if (filters.size !== undefined) params.set('size', String(filters.size));
+  const qs = params.toString();
+  return request<AuditLogPage>(`${BASE}/audit-logs${qs ? `?${qs}` : ''}`);
 }

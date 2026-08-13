@@ -3,10 +3,12 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import {
   KnowledgeBaseEntry,
   KnowledgeBaseRequest,
+  UserRole,
   getKnowledgeBase,
   createKnowledgeBaseEntry,
   updateKnowledgeBaseEntry,
   deleteKnowledgeBaseEntry,
+  getUserRole,
 } from '../api';
 import { PageHeader, Loading, ErrorDisplay } from '../components/Common';
 import FocusTrap from '../components/FocusTrap';
@@ -40,10 +42,15 @@ const LABEL_STYLE: React.CSSProperties = {
   color: '#374151',
 };
 
+function canMutateKb(role: UserRole | null): boolean {
+  return role === 'KB_ADMIN' || role === 'MANAGER';
+}
+
 export default function KnowledgeBasePage() {
   const [entries, setEntries] = useState<KnowledgeBaseEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
 
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [formData, setFormData] = useState<KnowledgeBaseRequest>(EMPTY_FORM);
@@ -60,6 +67,10 @@ export default function KnowledgeBasePage() {
       .then(setEntries)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    getUserRole().then(setUserRole);
   }, []);
 
   const openAddModal = () => {
@@ -153,45 +164,53 @@ export default function KnowledgeBasePage() {
           title="Knowledge Base"
           description="Manage known error patterns and their solutions"
         />
-        <button
-          ref={addButtonRef}
-          type="button"
-          onClick={openAddModal}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 16px',
-            backgroundColor: '#2563eb',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontWeight: 600,
-            fontSize: '0.9em',
-            flexShrink: 0,
-          }}
-        >
-          <Plus size={16} aria-hidden="true" />
-          Add Entry
-        </button>
+        {canMutateKb(userRole) && (
+          <button
+            ref={addButtonRef}
+            type="button"
+            onClick={openAddModal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              backgroundColor: '#2563eb',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.9em',
+              flexShrink: 0,
+            }}
+          >
+            <Plus size={16} aria-hidden="true" />
+            Add Entry
+          </button>
+        )}
       </div>
 
       {loading && <Loading message="Loading knowledge base..." />}
       {error && <ErrorDisplay message={error} />}
 
       {!loading && !error && entries.length === 0 && (
-        {/* #475569 on #f8fafc: ~6.8:1 — passes 4.5:1 ✓ */}
         <p style={{ color: '#475569' }}>
-          No entries yet.{' '}
-          <button
-            type="button"
-            onClick={openAddModal}
-            style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, textDecoration: 'underline', fontSize: 'inherit' }}
-          >
-            Add the first entry
-          </button>{' '}
-          to get started.
+          {/* #475569 on #f8fafc: ~6.8:1 — passes 4.5:1 ✓ */}
+          {canMutateKb(userRole) ? (
+            <>
+              No entries yet.{' '}
+              <button
+                type="button"
+                onClick={openAddModal}
+                style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, textDecoration: 'underline', fontSize: 'inherit' }}
+              >
+                Add the first entry
+              </button>{' '}
+              to get started.
+            </>
+          ) : (
+            'No entries yet.'
+          )}
         </p>
       )}
 
@@ -216,50 +235,52 @@ export default function KnowledgeBasePage() {
                 <td style={{ padding: '8px' }}>{entry.category}</td>
                 <td className="col-severity" style={{ padding: '8px' }}>{entry.severity}</td>
                 <td style={{ padding: '8px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      type="button"
-                      aria-label={`Edit entry: ${entry.errorPattern}`}
-                      onClick={(e) => openEditModal(entry, e.currentTarget)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '5px 10px',
-                        // #64748b border on #fff: ~4.2:1 — passes 3:1 UI boundary ✓
-                        border: '1px solid #64748b',
-                        borderRadius: '4px',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '0.85em',
-                      }}
-                    >
-                      <Pencil size={14} aria-hidden="true" />
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Delete entry: ${entry.errorPattern}`}
-                      onClick={(e) => openDeleteModal(entry, e.currentTarget)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '5px 10px',
-                        // #b91c1c border on #fff: ~6.5:1 — passes 3:1 UI boundary ✓
-                        border: '1px solid #b91c1c',
-                        borderRadius: '4px',
-                        background: '#fff',
-                        // #b91c1c text on #fff: ~6.5:1 — passes 4.5:1 ✓
-                        color: '#b91c1c',
-                        cursor: 'pointer',
-                        fontSize: '0.85em',
-                      }}
-                    >
-                      <Trash2 size={14} aria-hidden="true" />
-                      Delete
-                    </button>
-                  </div>
+                  {canMutateKb(userRole) && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        aria-label={`Edit entry: ${entry.errorPattern}`}
+                        onClick={(e) => openEditModal(entry, e.currentTarget)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '5px 10px',
+                          // #64748b border on #fff: ~4.2:1 — passes 3:1 UI boundary ✓
+                          border: '1px solid #64748b',
+                          borderRadius: '4px',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          fontSize: '0.85em',
+                        }}
+                      >
+                        <Pencil size={14} aria-hidden="true" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Delete entry: ${entry.errorPattern}`}
+                        onClick={(e) => openDeleteModal(entry, e.currentTarget)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '5px 10px',
+                          // #b91c1c border on #fff: ~6.5:1 — passes 3:1 UI boundary ✓
+                          border: '1px solid #b91c1c',
+                          borderRadius: '4px',
+                          background: '#fff',
+                          // #b91c1c text on #fff: ~6.5:1 — passes 4.5:1 ✓
+                          color: '#b91c1c',
+                          cursor: 'pointer',
+                          fontSize: '0.85em',
+                        }}
+                      >
+                        <Trash2 size={14} aria-hidden="true" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

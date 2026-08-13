@@ -1,6 +1,7 @@
 package com.opsera.pipelineassistant.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opsera.pipelineassistant.dto.Responses.DashboardResponse;
 import com.opsera.pipelineassistant.dto.Responses.HistoryListDTO;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.security.CustomUserDetailsService;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -31,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AnalysisController.class)
+@WithMockUser(roles = "ANALYST")
 class AnalysisControllerTest {
 
     @Autowired
@@ -161,6 +164,27 @@ class AnalysisControllerTest {
     }
 
     @Test
+    void shouldIncludeSanitizedTrueInAnalyzeResponse() throws Exception {
+        AnalyzedLog response = AnalyzedLog.builder()
+                .id(5L)
+                .category("Permissions")
+                .rootCause("Auth failure")
+                .suggestedFix("Check credentials")
+                .customerUpdate("We identified an auth issue.")
+                .severity("HIGH")
+                .confidence(90)
+                .build();
+
+        when(analysisService.analyze(anyString())).thenReturn(response);
+
+        mockMvc.perform(post("/api/analyze")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"logText\":\"Bearer eyJtokenFake auth failed at 10.0.0.1 user@test.com\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sanitized", is(true)));
+    }
+
+    @Test
     void shouldReturn415WhenContentTypeIsNotJson() throws Exception {
         mockMvc.perform(post("/api/analyze")
                         .contentType(MediaType.TEXT_PLAIN)
@@ -239,11 +263,10 @@ class AnalysisControllerTest {
 
     @Test
     void shouldReturnDashboardStats() throws Exception {
-        Map<String, Object> stats = Map.of(
-                "totalErrors", 6,
-                "analyzedLogs", 42,
-                "mostCommonIssue", "Memory",
-                "categoryBreakdown", Map.of("Memory", 10, "Network", 8)
+        DashboardResponse stats = new DashboardResponse(
+                6L, 42L, "Memory",
+                Map.of("Memory", 10L, "Network", 8L),
+                75, 5L, 20L, List.of()
         );
 
         when(dashboardService.getStats()).thenReturn(stats);
@@ -254,16 +277,17 @@ class AnalysisControllerTest {
                 .andExpect(jsonPath("$.totalErrors", is(6)))
                 .andExpect(jsonPath("$.analyzedLogs", is(42)))
                 .andExpect(jsonPath("$.mostCommonIssue", is("Memory")))
-                .andExpect(jsonPath("$.categoryBreakdown").exists());
+                .andExpect(jsonPath("$.categoryBreakdown").exists())
+                .andExpect(jsonPath("$.averageConfidence", is(75)))
+                .andExpect(jsonPath("$.analysesLast7Days", is(5)))
+                .andExpect(jsonPath("$.analysesLast30Days", is(20)))
+                .andExpect(jsonPath("$.topCategories").exists());
     }
 
     @Test
     void shouldReturnDashboardStatsWithZeroCounts() throws Exception {
-        Map<String, Object> stats = Map.of(
-                "totalErrors", 0,
-                "analyzedLogs", 0,
-                "mostCommonIssue", "None",
-                "categoryBreakdown", Map.of()
+        DashboardResponse stats = new DashboardResponse(
+                0L, 0L, "None", Map.of(), 0, 0L, 0L, List.of()
         );
 
         when(dashboardService.getStats()).thenReturn(stats);
@@ -272,18 +296,17 @@ class AnalysisControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.totalErrors", is(0)))
-                .andExpect(jsonPath("$.analyzedLogs", is(0)));
+                .andExpect(jsonPath("$.analyzedLogs", is(0)))
+                .andExpect(jsonPath("$.averageConfidence", is(0)))
+                .andExpect(jsonPath("$.topCategories", hasSize(0)));
     }
 
     @Test
     void shouldReturnJsonContentTypeForHistoryAndDashboard() throws Exception {
         when(analysisService.getHistory(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
-        when(dashboardService.getStats()).thenReturn(Map.of(
-                "totalErrors", 0,
-                "analyzedLogs", 0,
-                "mostCommonIssue", "None",
-                "categoryBreakdown", Map.of()
-        ));
+        when(dashboardService.getStats()).thenReturn(
+                new DashboardResponse(0L, 0L, "None", Map.of(), 0, 0L, 0L, List.of())
+        );
 
         mockMvc.perform(get("/api/history"))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));

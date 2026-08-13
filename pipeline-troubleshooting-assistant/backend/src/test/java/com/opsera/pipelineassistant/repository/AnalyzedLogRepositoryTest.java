@@ -7,9 +7,12 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -159,5 +162,102 @@ class AnalyzedLogRepositoryTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0)[0]).isEqualTo("BUILD_FAILURE");
         assertThat(result.get(0)[1]).isEqualTo(5L);
+    }
+
+    // ── findAverageConfidence ──────────────────────────────────────────────────
+
+    @Test
+    void shouldReturnAverageConfidenceAcrossAllLogs() {
+        AnalyzedLog log1 = buildLog("Memory");
+        log1.setConfidence(90);
+        AnalyzedLog log2 = buildLog("Network");
+        log2.setConfidence(70);
+        entityManager.persistAndFlush(log1);
+        entityManager.persistAndFlush(log2);
+        entityManager.clear();
+
+        Optional<Double> avg = repository.findAverageConfidence();
+
+        assertThat(avg).isPresent();
+        assertThat(avg.get()).isEqualTo(80.0);
+    }
+
+    @Test
+    void shouldReturnEmptyAverageConfidenceWhenNoLogsExist() {
+        Optional<Double> avg = repository.findAverageConfidence();
+
+        assertThat(avg).isEmpty();
+    }
+
+    // ── countByCreatedAtAfter ─────────────────────────────────────────────────
+
+    @Test
+    void shouldCountLogsCreatedAfterGivenTimestamp() {
+        AnalyzedLog recent = entityManager.persistAndFlush(buildLog("Memory"));
+        AnalyzedLog old = entityManager.persistAndFlush(buildLog("Network"));
+
+        setCreatedAt(recent.getId(), LocalDateTime.now().minusDays(3));
+        setCreatedAt(old.getId(), LocalDateTime.now().minusDays(10));
+        entityManager.flush();
+        entityManager.clear();
+
+        Long countLast7 = repository.countByCreatedAtAfter(LocalDateTime.now().minusDays(7));
+        Long countLast30 = repository.countByCreatedAtAfter(LocalDateTime.now().minusDays(30));
+
+        assertThat(countLast7).isEqualTo(1L);
+        assertThat(countLast30).isEqualTo(2L);
+    }
+
+    @Test
+    void shouldReturnZeroCountWhenNoLogsAfterTimestamp() {
+        entityManager.persistAndFlush(buildLog("Memory"));
+        entityManager.flush();
+        entityManager.clear();
+
+        Long count = repository.countByCreatedAtAfter(LocalDateTime.now().plusDays(1));
+
+        assertThat(count).isEqualTo(0L);
+    }
+
+    // ── findTopCategoriesByCount ───────────────────────────────────────────────
+
+    @Test
+    void shouldReturnTopCategoriesOrderedByCountDesc() {
+        entityManager.persistAndFlush(buildLog("Memory"));
+        entityManager.persistAndFlush(buildLog("Memory"));
+        entityManager.persistAndFlush(buildLog("Memory"));
+        entityManager.persistAndFlush(buildLog("Network"));
+        entityManager.persistAndFlush(buildLog("Network"));
+        entityManager.persistAndFlush(buildLog("Docker"));
+        entityManager.clear();
+
+        List<Object[]> result = repository.findTopCategoriesByCount(PageRequest.of(0, 5));
+
+        assertThat(result).hasSize(3);
+        assertThat(result.get(0)[0]).isEqualTo("Memory");
+        assertThat(result.get(0)[1]).isEqualTo(3L);
+        assertThat(result.get(1)[0]).isEqualTo("Network");
+        assertThat(result.get(1)[1]).isEqualTo(2L);
+        assertThat(result.get(2)[0]).isEqualTo("Docker");
+        assertThat(result.get(2)[1]).isEqualTo(1L);
+    }
+
+    @Test
+    void shouldLimitTopCategoriesToPageSize() {
+        for (String cat : new String[]{"A", "B", "C", "D", "E", "F"}) {
+            entityManager.persistAndFlush(buildLog(cat));
+        }
+        entityManager.clear();
+
+        List<Object[]> result = repository.findTopCategoriesByCount(PageRequest.of(0, 5));
+
+        assertThat(result).hasSize(5);
+    }
+
+    @Test
+    void shouldReturnEmptyTopCategoriesWhenNoLogsExist() {
+        List<Object[]> result = repository.findTopCategoriesByCount(PageRequest.of(0, 5));
+
+        assertThat(result).isEmpty();
     }
 }

@@ -1,13 +1,100 @@
 package com.opsera.pipelineassistant.dto;
 
 import com.opsera.pipelineassistant.model.AnalyzedLog;
+import com.opsera.pipelineassistant.model.AuditLog;
+import com.opsera.pipelineassistant.model.RefreshToken;
+import com.opsera.pipelineassistant.model.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public final class Responses {
 
     private Responses() {}
+
+    public record CategoryStat(String category, long count, double percentage) {}
+
+    public record AuditLogDTO(
+            Long id,
+            String actorEmail,
+            String action,
+            String resourceType,
+            String resourceId,
+            Map<String, Object> details,
+            String ipAddress,
+            LocalDateTime createdAt
+    ) {
+        public static AuditLogDTO from(AuditLog log) {
+            return new AuditLogDTO(
+                    log.getId(),
+                    log.getActorEmail(),
+                    log.getAction(),
+                    log.getResourceType(),
+                    log.getResourceId(),
+                    log.getDetails(),
+                    log.getIpAddress(),
+                    log.getCreatedAt()
+            );
+        }
+    }
+
+    public record DashboardResponse(
+            long totalErrors,
+            long analyzedLogs,
+            String mostCommonIssue,
+            Map<String, Long> categoryBreakdown,
+            int averageConfidence,
+            long analysesLast7Days,
+            long analysesLast30Days,
+            List<CategoryStat> topCategories
+    ) {}
+
+    public record UserProfileDTO(
+            String displayName,
+            String email,
+            String role,
+            boolean mfaEnabled,
+            LocalDateTime createdAt
+    ) {
+        public static UserProfileDTO from(User user) {
+            return new UserProfileDTO(
+                    user.getDisplayName(),
+                    user.getEmail(),
+                    user.getRole().name(),
+                    Boolean.TRUE.equals(user.getMfaEnabled()),
+                    user.getCreatedAt()
+            );
+        }
+    }
+
+    public record SessionDTO(
+            String sessionId,
+            LocalDateTime createdAt,
+            LocalDateTime lastUsedAt,
+            String ipAddress,
+            boolean isCurrent
+    ) {
+        public static SessionDTO from(RefreshToken token) {
+            return new SessionDTO(
+                    token.getId().toString(),
+                    token.getCreatedAt(),
+                    token.getCreatedAt(),
+                    null,
+                    false
+            );
+        }
+    }
+
+    public record RegisterResponse(String message) {}
+
+    public record RefreshResult(String accessToken, String refreshToken) {}
+
+    public record LoginResponse(String email, String displayName, String role, boolean mfaRequired) {}
+
+    public record LoginResult(String accessToken, String rawRefreshToken, LoginResponse profile, String challengeToken) {}
+
+    public record MfaSetupResponse(String qrCodeUri, List<String> recoveryCodes) {}
 
     /**
      * Lightweight projection of AnalyzedLog for the history list endpoint.
@@ -82,7 +169,8 @@ public final class Responses {
             String severity,
             Integer confidence,
             LocalDateTime createdAt,
-            List<String> matchedPatterns
+            List<String> matchedPatterns,
+            boolean sanitized
     ) {
         public static AnalysisResponse from(AnalyzedLog log) {
             return new AnalysisResponse(
@@ -94,7 +182,8 @@ public final class Responses {
                     log.getSeverity(),
                     log.getConfidence(),
                     log.getCreatedAt(),
-                    log.getMatchedPatterns() != null ? log.getMatchedPatterns() : List.of()
+                    log.getMatchedPatterns() != null ? log.getMatchedPatterns() : List.of(),
+                    true
             );
         }
     }

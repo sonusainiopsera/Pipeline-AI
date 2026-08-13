@@ -1,5 +1,6 @@
 package com.opsera.pipelineassistant.service;
 
+import com.opsera.pipelineassistant.audit.AuditService;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.ErrorRepository;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -30,6 +31,9 @@ class KnowledgeBaseServiceTest {
 
     @Mock
     private MeterRegistry meterRegistry;
+
+    @Mock
+    private AuditService auditService;
 
     @InjectMocks
     private KnowledgeBaseService knowledgeBaseService;
@@ -189,7 +193,7 @@ class KnowledgeBaseServiceTest {
     @Test
     void shouldIncrementKbOperationsCounterOnCreate() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        KnowledgeBaseService svc = new KnowledgeBaseService(errorRepository, registry);
+        KnowledgeBaseService svc = new KnowledgeBaseService(errorRepository, registry, auditService);
 
         ErrorKnowledgeBase input = buildKnowledgeBaseEntity(null, "p", "C", "R", "S", "LOW");
         when(errorRepository.save(input)).thenReturn(input);
@@ -203,7 +207,7 @@ class KnowledgeBaseServiceTest {
     @Test
     void shouldIncrementKbOperationsCounterOnUpdate() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        KnowledgeBaseService svc = new KnowledgeBaseService(errorRepository, registry);
+        KnowledgeBaseService svc = new KnowledgeBaseService(errorRepository, registry, auditService);
 
         ErrorKnowledgeBase existing = buildKnowledgeBaseEntity(5L, "old", "OldCat", "OldR", "OldS", "LOW");
         when(errorRepository.findById(5L)).thenReturn(Optional.of(existing));
@@ -218,7 +222,7 @@ class KnowledgeBaseServiceTest {
     @Test
     void shouldIncrementKbOperationsCounterOnDelete() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        KnowledgeBaseService svc = new KnowledgeBaseService(errorRepository, registry);
+        KnowledgeBaseService svc = new KnowledgeBaseService(errorRepository, registry, auditService);
 
         ErrorKnowledgeBase existing = buildKnowledgeBaseEntity(3L, "p", "C", "R", "S", "LOW");
         when(errorRepository.findById(3L)).thenReturn(Optional.of(existing));

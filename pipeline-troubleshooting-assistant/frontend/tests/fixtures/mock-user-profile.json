@@ -1,0 +1,7 @@
+{
+  "displayName": "Alice Johnson",
+  "email": "alice@example.com",
+  "role": "ANALYST",
+  "mfaEnabled": false,
+  "createdAt": "2026-01-15T10:30:00"
+}

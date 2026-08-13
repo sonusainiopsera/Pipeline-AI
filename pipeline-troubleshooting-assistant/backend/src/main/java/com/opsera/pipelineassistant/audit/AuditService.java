@@ -2,6 +2,7 @@ package com.opsera.pipelineassistant.audit;
 
 import com.opsera.pipelineassistant.model.AuditLog;
 import com.opsera.pipelineassistant.repository.AuditLogRepository;
+import com.opsera.pipelineassistant.security.IpAddressUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,18 @@ import java.util.Map;
 public class AuditService {
 
     static final String SYSTEM_ACTOR = "SYSTEM";
+
+    public static final String LOGIN_SUCCESS = "LOGIN_SUCCESS";
+    public static final String LOGIN_FAILURE = "LOGIN_FAILURE";
+    public static final String MFA_VERIFY_SUCCESS = "MFA_VERIFY_SUCCESS";
+    public static final String MFA_VERIFY_FAILURE = "MFA_VERIFY_FAILURE";
+    public static final String TOKEN_REFRESH = "TOKEN_REFRESH";
+    public static final String LOGOUT = "LOGOUT";
+    public static final String REGISTRATION = "REGISTRATION";
+    public static final String EMAIL_VERIFIED = "EMAIL_VERIFIED";
+
+    public static final String RESOURCE_USER = "USER";
+    public static final String RESOURCE_SESSION = "SESSION";
 
     private final AuditLogRepository auditLogRepository;
 
@@ -110,11 +123,6 @@ public class AuditService {
         if (!(attributes instanceof ServletRequestAttributes servletAttrs)) {
             return null;
         }
-        HttpServletRequest request = servletAttrs.getRequest();
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return IpAddressUtil.extractClientIp(servletAttrs.getRequest());
     }
 }

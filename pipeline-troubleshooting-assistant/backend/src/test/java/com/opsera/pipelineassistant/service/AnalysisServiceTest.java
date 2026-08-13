@@ -5,6 +5,7 @@ import com.opsera.pipelineassistant.analysis.ResponseProperties;
 import com.opsera.pipelineassistant.analysis.ResponseTemplater;
 import com.opsera.pipelineassistant.analysis.ScoringEngine;
 import com.opsera.pipelineassistant.analysis.ScoringProperties;
+import com.opsera.pipelineassistant.audit.AuditService;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
@@ -38,6 +39,9 @@ class AnalysisServiceTest {
 
     @Mock
     private MeterRegistry meterRegistry;
+
+    @Mock
+    private AuditService auditService;
 
     @Mock
     private LogSanitizer logSanitizer;
@@ -386,7 +390,7 @@ class AnalysisServiceTest {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         AnalysisService service = new AnalysisService(
                 knowledgeBaseService, analyzedLogRepository, logSanitizer,
-                patternMatcher, scoringEngine, responseTemplater, registry);
+                patternMatcher, scoringEngine, responseTemplater, registry, auditService);
         lenient().when(logSanitizer.sanitize(anyString())).thenAnswer(inv -> inv.getArgument(0));
         when(knowledgeBaseService.getAllEntries()).thenReturn(Collections.emptyList());
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -403,7 +407,7 @@ class AnalysisServiceTest {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         AnalysisService service = new AnalysisService(
                 knowledgeBaseService, analyzedLogRepository, logSanitizer,
-                patternMatcher, scoringEngine, responseTemplater, registry);
+                patternMatcher, scoringEngine, responseTemplater, registry, auditService);
         lenient().when(logSanitizer.sanitize(anyString())).thenAnswer(inv -> inv.getArgument(0));
 
         ErrorKnowledgeBase entry = ErrorKnowledgeBase.builder()
@@ -428,7 +432,7 @@ class AnalysisServiceTest {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         AnalysisService service = new AnalysisService(
                 knowledgeBaseService, analyzedLogRepository, logSanitizer,
-                patternMatcher, scoringEngine, responseTemplater, registry);
+                patternMatcher, scoringEngine, responseTemplater, registry, auditService);
         lenient().when(logSanitizer.sanitize(anyString())).thenAnswer(inv -> inv.getArgument(0));
         when(knowledgeBaseService.getAllEntries()).thenReturn(Collections.emptyList());
         when(analyzedLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

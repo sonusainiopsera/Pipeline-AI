@@ -4,11 +4,14 @@ import com.opsera.pipelineassistant.analysis.PatternMatcher;
 import com.opsera.pipelineassistant.analysis.ResponseTemplater;
 import com.opsera.pipelineassistant.analysis.ScoredMatch;
 import com.opsera.pipelineassistant.analysis.ScoringEngine;
+import com.opsera.pipelineassistant.audit.AuditService;
 import com.opsera.pipelineassistant.dto.Responses.HistoryDetailDTO;
 import com.opsera.pipelineassistant.dto.Responses.HistoryListDTO;
 import com.opsera.pipelineassistant.model.AnalyzedLog;
 import com.opsera.pipelineassistant.model.ErrorKnowledgeBase;
+import com.opsera.pipelineassistant.model.User;
 import com.opsera.pipelineassistant.repository.AnalyzedLogRepository;
+import com.opsera.pipelineassistant.repository.UserRepository;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -17,11 +20,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -30,11 +37,13 @@ public class AnalysisService {
 
     private final KnowledgeBaseService knowledgeBaseService;
     private final AnalyzedLogRepository analyzedLogRepository;
+    private final UserRepository userRepository;
     private final LogSanitizer logSanitizer;
     private final PatternMatcher patternMatcher;
     private final ScoringEngine scoringEngine;
     private final ResponseTemplater responseTemplater;
     private final MeterRegistry meterRegistry;
+    private final AuditService auditService;
 
     public AnalyzedLog analyze(String logText) {
         log.info("Starting analysis, logTextLength={}", logText != null ? logText.length() : 0);
@@ -103,6 +112,7 @@ public class AnalysisService {
                     .customerUpdate(customerUpdate)
                     .severity(severity)
                     .confidence(confidence)
+                    .user(extractCurrentUser())
                     .build();
             result.setMatchedPatterns(matchedPatterns);
 
@@ -114,7 +124,17 @@ public class AnalysisService {
             }
 
             log.info("Analysis complete, category={}, confidence={}", category, confidence);
-            return analyzedLogRepository.save(result);
+            AnalyzedLog saved = analyzedLogRepository.save(result);
+            try {
+                Map<String, Object> auditDetails = new HashMap<>();
+                auditDetails.put("category", saved.getCategory());
+                auditDetails.put("confidence", saved.getConfidence());
+                auditDetails.put("severity", saved.getSeverity());
+                auditService.logEvent("ANALYZE", "ANALYSIS", String.valueOf(saved.getId()), auditDetails);
+            } catch (Exception auditEx) {
+                log.warn("Failed to record audit event for analysis id={}: {}", saved.getId(), auditEx.getMessage());
+            }
+            return saved;
         } finally {
             // Always record latency even when an exception propagates
             try {
@@ -128,6 +148,20 @@ public class AnalysisService {
     public Page<HistoryListDTO> getHistory(Pageable pageable) {
         return analyzedLogRepository.findAllByOrderByCreatedAtDesc(pageable)
                 .map(HistoryListDTO::from);
+    }
+
+    User extractCurrentUser() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                return null;
+            }
+            String email = auth.getName();
+            return userRepository.findByEmail(email).orElse(null);
+        } catch (Exception e) {
+            log.warn("Failed to extract current user from SecurityContext: {}", e.getMessage());
+            return null;
+        }
     }
 
     // @PreAuthorize("hasRole('ANALYST')") — placeholder for Spring Security integration (Security epic)

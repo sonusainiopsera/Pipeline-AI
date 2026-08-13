@@ -462,3 +462,157 @@
 - **Files:** 0 (+0/-0)
 - **Duration:** 232ss
 - **Approach:** WO-074 required updating the Dockerfiles to use multi-stage builds with Java 21, updating docker-compose.yml with health checks for all services, and verifying nginx.conf has SPA routing. Inspection of all four key files revealed all requirements were already fully implemented by prior WOs: WO-072 ([WO-073] Upgrade Spring Boot 3.3.5 to 3.5.3 chain) updated backend/Dockerfile to eclipse-temurin:21-jdk-alpine/21-jre-alpine and frontend/Dockerfile to node:22-alpine/nginx:stable-alpine; WO-068 added health checks to docker-compose.yml for all three services (backend wget, frontend wget, db pg_isready) and set depends_on conditions to service_healthy; frontend/nginx.conf already contains try_files $uri $uri/ /index.html for SPA routing and gzip compression. No code changes were required or made for this WO.
+
+## WO-022: User Story: WO-022 - Implement JWT Authentication Filter
+- **Status:** completed
+- **Commit:** `f0a5e4f`
+- **Files:** 8 (+506/-1)
+- **Duration:** 726ss
+- **Approach:** Created JwtAuthenticationFilter in the security package extending OncePerRequestFilter with constructor injection of JwtTokenProvider and CustomUserDetailsService (both already present from WO-020/WO-021). The filter uses two private extraction methods: extractTokenFromCookie() reads the 'access_token' cookie, extractTokenFromHeader() strips the 'Bearer ' prefix from the Authorization header. Cookie takes priority: the header is only tried when the cookie yields null. shouldNotFilter() skips /api/auth/** and /actuator/** paths. doFilterInternal() wraps all processing in a try-catch — on success, a UsernamePasswordAuthenticationToken (with WebAuthenticationDetailsSource details) is set in SecurityContextHolder; on any exception, the context is cleared and the filter chain continues without authentication. SecurityConfig.securityFilterChain() now accepts JwtAuthenticationFilter as a method parameter and registers it before UsernamePasswordAuthenticationFilter via addFilterBefore(); the existing permitAll() posture is preserved for WOREF-026. Since @WebMvcTest slices include Filter beans, the four existing controller @WebMvcTest tests were updated to add @MockBean JwtTokenProvider and @MockBean CustomUserDetailsService to satisfy the filter's constructor dependencies in the slice context — their mocked default return values (false for validateToken) keep all existing test assertions passing.
+
+## WO-030: User Story: WO-030 - Implement Email Verification Endpoint
+- **Status:** completed
+- **Commit:** `e829259`
+- **Files:** 10 (+445/-0)
+- **Duration:** 459ss
+- **Approach:** Created EmailService interface and ConsoleEmailService (@Profile('dev')) for token delivery. AuthService implements register (UUID token + 24h expiry + BCrypt password hash), verifyEmail (validates token, checks expiry, activates account), and resendVerification (email-enumeration-safe no-op for unknown/verified). AuthController exposes GET /api/auth/verify and POST /api/auth/verify/resend. Added PasswordEncoder @Bean to SecurityConfig and findByVerificationToken to UserRepository.
+
+## WO-031: User Story: WO-031 - Implement Expired Token Cleanup Scheduler
+- **Status:** completed
+- **Commit:** `060b89e`
+- **Files:** 7 (+297/-1)
+- **Duration:** 320ss
+- **Approach:** Added @ConditionalOnProperty to existing SchedulerConfig so the scheduler can be disabled in test contexts. Created TokenCleanupScheduler with @Scheduled(cron='0 0 2 * * *', zone='UTC') that batch-deletes expired refresh tokens (countByExpiresAtBefore then deleteAllByExpiresAtBefore) and batch-clears expired verification token fields from unverified users via a new @Modifying @Query on UserRepository. Added countByExpiresAtBefore to RefreshTokenRepository for count logging. Added app.scheduler.enabled: true to application.yml with disable instructions.
+
+## WO-023: User Story: WO-023 - Implement User Registration Endpoint
+- **Status:** completed
+- **Commit:** `2d81789`
+- **Files:** 9 (+406/-9)
+- **Duration:** 341ss
+- **Approach:** Added POST /api/auth/register to the existing AuthController (from WO-030). AuthService.register() was updated to normalize email to lowercase/trim, validate password complexity via regex (uppercase, lowercase, digit, special char, min 12 chars), and return a 409 with an enumeration-safe generic message for duplicate emails. BCryptPasswordEncoder upgraded to cost-12. RegisterRequest DTO with @Email/@NotBlank/@Size/@Pattern, RegisterResponse in Responses.java. AuthServiceVerificationTest updated to use valid passwords after complexity validation was added.
+
+## WO-025: User Story: WO-025 - Implement Token Refresh and Logout Endpoints
+- **Status:** completed
+- **Commit:** `a431800`
+- **Files:** 5 (+491/-0)
+- **Duration:** 321ss
+- **Approach:** Added refresh() and logout() to AuthService with SHA-256 hashing via MessageDigest. refresh() verifies the stored hash, checks expiry (deletes+401 if expired), generates new access+refresh tokens via JwtTokenProvider, rotates the DB record (delete-then-save). logout() is a best-effort delete that catches all exceptions. AuthController wraps refresh() in try-catch to ensure 401+cookie-clearing on any service error. logout() always returns 200 with Max-Age=0 cookies. RefreshResult(accessToken, refreshToken) record added to Responses.java.
+
+## WO-032: User Story: WO-032 - Update Frontend API Client for Authentication
+- **Status:** completed
+- **Commit:** `60d059b`
+- **Files:** 7 (+669/-90)
+- **Duration:** 294ss
+- **Approach:** Refactored api.ts to use a central request<T>() helper that adds credentials:'include' to every fetch call. Implemented a 401 interceptor with isRefreshing flag and refreshQueue array: on 401, one refresh attempt is made; concurrent requests queue and wait for the result; success drains the queue with retries, failure drains with rejections and redirects to /login. Auth endpoints are excluded from the refresh loop. Added type-safe auth functions (login, register, verifyEmail, logout, refreshToken, mfaSetup, mfaVerify, mfaChallenge, mfaRecover, getMe). Created AuthContext with user/isAuthenticated/isLoading state and AuthProvider that calls checkAuth on mount. Added ProtectedRoute and wrapped App with AuthProvider.
+
+## WO-024: User Story: WO-024 - Implement JWT Login Endpoint with Cookies
+- **Status:** completed
+- **Commit:** `8baf44e`
+- **Files:** 11 (+658/-1)
+- **Duration:** 611ss
+- **Approach:** Added AuthService.login() implementing the full login flow: email normalization, emailVerified check (EmailNotVerifiedException/403), lockedUntil check with expired-lock cleanup (AccountLockedException/423), BCrypt password verification, failedLoginAttempts increment/reset, lockedUntil set after 5th failure, session limit enforcement via countByUserId + findFirstByUserIdOrderByCreatedAtAsc (delete oldest when >= 3), token generation and refresh token hash storage. AuthController POST /login calls login() and sets access_token (Path=/api, Max-Age=900) and refresh_token (Path=/api/auth, Max-Age=604800) as HTTP-only secure SameSite=Strict cookies, returning only the user profile in the response body. Exception handlers for AccountLockedException (423) and EmailNotVerifiedException (403) added to ApiExceptionHandler.
+
+## WO-027: User Story: WO-027 - Implement Role-Based Access Control with PreAuthorize
+- **Status:** completed
+- **Commit:** `5e95387`
+- **Files:** 10 (+458/-8)
+- **Duration:** 538ss
+- **Approach:** Added @EnableMethodSecurity to SecurityConfig and updated the SecurityFilterChain to require authentication for all /api/** endpoints while permitting /api/auth/** and /actuator/** publicly. Added @PreAuthorize('hasAnyRole(ANALYST, KB_ADMIN, MANAGER)') to all AnalysisController methods (analyze, getHistory, getHistoryDetail, getDashboard) and to ErrorController.findAll(). Added @PreAuthorize('hasAnyRole(KB_ADMIN, MANAGER)') to ErrorController create/update/delete methods. Added AccessDeniedException handler to ApiExceptionHandler returning 403 JSON {timestamp, message, status} — this ensures @PreAuthorize failures produce consistent JSON responses instead of falling through to the catch-all 500 handler. Updated 4 existing controller test classes with @WithMockUser to prevent regressions from the new security requirements. Created 30 RBAC tests (17 in AnalysisControllerRbacTest, 13 in ErrorControllerRbacTest) covering all role-endpoint combinations including JSON error body verification.
+
+## WO-053: User Story: WO-053 - Integrate Audit Logging into Knowledge Base Mutations
+- **Status:** completed
+- **Commit:** `2e2f3cb`
+- **Files:** 7 (+610/-8)
+- **Duration:** 606ss
+- **Approach:** Injected AuditService into KnowledgeBaseService and AnalysisService via Lombok @RequiredArgsConstructor. Added @Transactional to all three KB mutation methods. In create(), called auditService.logCreate after repository.save() with a HashMap of {category, severity, errorPattern}. In update(), captured before-state into a HashMap before any setXxx() calls on the entity, then built an after-state map post-save, and called auditService.logUpdate with a {before, after} details map. In delete(), changed the discarded findById() call to capture the entity, then called auditService.logDelete with the entity state after deleteById(). In AnalysisService.analyze(), changed return statement to capture the saved AnalyzedLog, then called auditService.logEvent('ANALYZE', 'ANALYSIS', id, {category, confidence, severity}) — logText is explicitly excluded. All audit calls are wrapped in defensive try-catch so KB/analysis mutations succeed even if audit persistence fails. Updated existing tests that used direct constructor invocation to pass the new AuditService mock as an additional argument.
+
+## WO-026: User Story: WO-026 - Configure SecurityFilterChain with Endpoint Protection
+- **Status:** completed
+- **Commit:** `7bb3bda`
+- **Files:** 7 (+353/-13)
+- **Duration:** 542ss
+- **Approach:** Created CustomAuthenticationEntryPoint (implements AuthenticationEntryPoint, returns 401 JSON {timestamp, message: 'Authentication required', status: 401}) and CustomAccessDeniedHandler (implements AccessDeniedHandler, returns 403 JSON {timestamp, message: 'Access denied', status: 403}). Split SecurityConfig into two @Profile-based SecurityFilterChain beans: @Profile('!auth-optional') (auth-required chain — enforces authentication on /api/** except /api/auth/** and /actuator/health, /actuator/info, STATELESS sessions, CSRF disabled, custom entry point and access denied handler) and @Profile('auth-optional') (permissive chain — anyRequest().permitAll(), JWT filter still registered, warns at startup). The '!auth-optional' expression is chosen so existing tests with @ActiveProfiles('test') or no profile continue using the restrictive chain. Updated WebConfig to use app.cors.allowed-origins instead of wildcard, add allowCredentials(true), and restrict allowedHeaders to Content-Type/Accept/X-Requested-With/Authorization. Added spring.profiles.active: auth-optional to application.yml as the default.
+
+## WO-028: User Story: WO-028 - Implement MFA Setup and TOTP Enrollment
+- **Status:** completed
+- **Commit:** `3401e3b`
+- **Files:** 13 (+824/-0)
+- **Duration:** 730ss
+- **Approach:** Implemented TOTP-based MFA enrollment via two new endpoints on AuthController. AesEncryptionUtil uses AES-256-GCM with a random 12-byte IV (prepended to ciphertext, Base64-encoded) to encrypt TOTP secrets at rest; the key is derived from a config property via SHA-256. MfaService orchestrates the full flow: generates a base32 TOTP secret using dev.samstevens.totp, builds an otpauth:// QR URI, generates 8 eight-character alphanumeric recovery codes (BCrypt-hashed for storage as a JSON array), encrypts and stores the secret with a 10-minute setup expiry, then on verify decrypts the secret, validates the code with ±1 time-step tolerance, and sets mfaEnabled=true. Both endpoints require authentication via @PreAuthorize("isAuthenticated()"). Flyway migration V5 adds mfa_setup_expires_at and recovery_codes columns.
+
+## WO-033: User Story: WO-033 - Create Login and MFA Frontend Pages
+- **Status:** completed
+- **Commit:** `be2fc97`
+- **Files:** 12 (+1391/-3)
+- **Duration:** 1204ss
+- **Approach:** Created four auth pages following existing component patterns (inline styles using established design tokens, useState hooks, direct api calls). App.tsx uses window.location.pathname to detect auth routes (/login, /register, /mfa/verify, /mfa/enroll) and renders the corresponding page outside the ProtectedRoute/Layout wrapper — consistent with the existing state-based routing architecture (no react-router-dom). QR code is displayed as a copyable text textarea showing the otpauth:// URI, as the WO explicitly allows this alternative. Fixed MfaSetupResponse type to use qrCodeUri (matching WO-028 backend) and updated authResponses fixture. Tests use vi.mock('../api') with Vitest's hoisting to mock the api module and assert rendering, validation, submission, and redirect behavior.
+
+## WO-029: User Story: WO-029 - Enforce MFA Verification During Login Flow
+- **Status:** completed
+- **Commit:** `cd9c791`
+- **Files:** 11 (+726/-9)
+- **Duration:** 889ss
+- **Approach:** Implemented a two-step MFA login flow. AuthService.login() branches on mfaEnabled: MFA-enabled users receive a 5-minute JWT challenge token (set as an mfa_challenge HttpOnly cookie, stored as SHA-256 hash on User.mfaChallengeTokenHash for single-use enforcement) instead of access/refresh tokens. Two new endpoints complete login: POST /mfa/challenge validates the cookie + TOTP code, and POST /mfa/recover validates the cookie + a BCrypt-matched recovery code. Both clear the challenge token hash before verifying to enforce single-use regardless of outcome. JwtTokenProvider gained generateMfaChallengeToken/validateMfaChallengeToken/extractMfaChallengeEmail methods using a type=mfa-challenge claim to distinguish challenge tokens from access tokens. AuthService gained AesEncryptionUtil and ObjectMapper dependencies to decrypt the TOTP secret and parse/update the JSON recovery codes list. Non-MFA users receive full access+refresh tokens with mfaRequired=false in LoginResponse.
+
+## WO-034: User Story: WO-034 - Add User ID to Analyzed Logs
+- **Status:** completed
+- **Commit:** `4a517d9`
+- **Files:** 3 (+199/-0)
+- **Duration:** 293ss
+- **Approach:** The AnalyzedLog entity already had a nullable @ManyToOne User user field mapped to user_id FK (added by V2 migration), and the DB column/index already existed. The remaining work was: (1) adding UserRepository to AnalysisService, (2) adding extractCurrentUser() to get the email from SecurityContextHolder, look up the User entity, and return null gracefully for anonymous/unauthenticated requests, (3) wiring .user(extractCurrentUser()) into the AnalyzedLog.builder() in analyze(), and (4) adding findByUser_IdOrderByCreatedAtDesc(UUID userId) to AnalyzedLogRepository using Spring Data JPA nested property syntax. No new DB migration was needed since the schema was already up to date.
+
+## WO-035: User Story: WO-035 - Implement Audit Logging for Auth Events
+- **Status:** completed
+- **Commit:** `c52a7f3`
+- **Files:** 6 (+472/-13)
+- **Duration:** 725ss
+- **Approach:** The audit infrastructure (AuditLog entity, AuditService, AuditLogRepository, DB migration V2) already existed. This WO adds: (1) IpAddressUtil utility checking X-Forwarded-For then X-Real-IP then getRemoteAddr(); (2) public static final constants for 8 auth action names and 2 resource types on AuditService; (3) AuditService.resolveClientIp() refactored to delegate to IpAddressUtil (adds X-Real-IP support); (4) findByResourceTypeAndCreatedAtBetween added to AuditLogRepository; (5) AuditService injected into AuthService via @RequiredArgsConstructor with 13 logEvent call-sites covering all 8 required event types, each wrapped in try-catch to prevent audit failures from affecting primary auth flows.
+
+## WO-036: User Story: WO-036 - Update CORS Configuration for Cookie Authentication
+- **Status:** completed
+- **Commit:** `7463fde`
+- **Files:** 2 (+112/-2)
+- **Duration:** 248ss
+- **Approach:** WebConfig.java already had allowCredentials(true), allowedOrigins from property, allowedMethods, and partial allowedHeaders. Three changes were needed: (1) remove 'Authorization' from allowedHeaders — cookie-based auth doesn't require it cross-origin per AC3; (2) add exposedHeaders('Set-Cookie') so browsers can access cookie-setting response headers; (3) add maxAge(3600) for preflight cache. SecurityConfig already delegates CORS to WebConfig via cors(Customizer.withDefaults()) in both filter chains — no changes needed. CorsConfigTest added using @WebMvcTest(AuthController.class) to verify preflight returns correct headers, credentials flag, maxAge, and that disallowed origins receive no CORS headers.
+
+## WO-037: User Story: WO-037 - Add Auth Integration Tests End-to-End Suite
+- **Status:** completed
+- **Commit:** `cbd0058`
+- **Files:** 2 (+468/-0)
+- **Duration:** 650ss
+- **Approach:** Testcontainers dependencies (postgresql + junit-jupiter) were already present in pom.xml. Created application-auth-it.yml with 5-second access token / 60-second refresh token expiry (for the expired-token test) and scheduler disabled. Created AuthIntegrationTest using @SpringBootTest(RANDOM_PORT) + @Testcontainers with a static PostgreSQLContainer and @DynamicPropertySource for datasource properties. @MockBean EmailService is no-op so verification tokens are read directly from UserRepository after registration. Cookie handling is done manually by parsing Set-Cookie response headers and injecting Cookie request headers via HttpEntity. MFA enrollment test extracts the TOTP secret from the qrCodeUri and uses DefaultCodeGenerator to generate a valid code. KB_ADMIN RBAC is tested by elevating a registered user's role via UserRepository before logging in.
+
+## WO-076: User Story: WO-076 - Implement Log Sanitization Before Analysis Persistence
+- **Status:** completed
+- **Commit:** `2e79baa`
+- **Files:** 3 (+135/-2)
+- **Duration:** 516ss
+- **Approach:** LogSanitizer.java, AnalysisService.java (sanitize() call), LogSanitizerTest.java, and fixture files under src/test/resources/sanitization/ were already present from a prior WO. The remaining work was: (1) add boolean sanitized field to AnalysisResponse in Responses.java with from() hardcoded to true since sanitization is unconditionally applied; (2) add a @WebMvcTest test verifying sanitized=true in the POST /api/analyze JSON response; (3) create AnalysisServiceSanitizationTest.java with four Mockito argument-captor tests confirming sanitize() is called before save() and that the persisted logText equals the sanitizer output.
+
+## WO-077: User Story: WO-077 - Secure Knowledge Base CRUD with Role Validation
+- **Status:** completed
+- **Commit:** `86b2c56`
+- **Files:** 8 (+197/-76)
+- **Duration:** 425ss
+- **Approach:** The majority of backend security was already implemented: ErrorController had @PreAuthorize('hasAnyRole(KB_ADMIN, MANAGER)') on mutations and @PreAuthorize('hasAnyRole(ANALYST, KB_ADMIN, MANAGER)') on GET, @ResponseStatus(CREATED) on create, @ResponseStatus(NO_CONTENT) on delete, SecurityConfig had @EnableMethodSecurity, KnowledgeBaseService.delete() called findById() for not-found protection, ErrorRequest had @Size constraints, KnowledgeBaseServiceTest and ErrorControllerTest existed. The remaining work was: (1) add @Pattern to ErrorRequest.severity for enum validation; (2) add 403 role-restriction tests and invalid-severity test to ErrorControllerTest; (3) add UserRole type to types.ts; (4) add getUserRole() helper to api.ts; (5) update KnowledgeBase.tsx to fetch the user role on mount and conditionally hide Add/Edit/Delete controls for non-KB_ADMIN/MANAGER roles; (6) create knowledge-base fixture files.
+
+## WO-078: User Story: WO-078 - Build Dashboard Statistics Backend API Endpoint
+- **Status:** completed
+- **Commit:** `1b6477c`
+- **Files:** 7 (+336/-66)
+- **Duration:** 590ss
+- **Approach:** Extended the existing DashboardService and AnalyzedLogRepository to support the 4 new aggregate metrics. Added typed DashboardResponse and CategoryStat records to Responses.java. Added 3 JPQL queries to the repository (AVG confidence with Optional return, time-range COUNT with @Param, and top-N category query using Pageable for H2/PostgreSQL portability). Rewrote DashboardService.getStats() to populate all fields including topCategories with percentage calculation. Updated AnalysisController to return the typed record instead of Map<String, Object>.
+
+## WO-080: User Story: WO-080 - Build Audit Log Viewer UI and API
+- **Status:** completed
+- **Commit:** `8a4ae05`
+- **Files:** 14 (+1339/-4)
+- **Duration:** 640ss
+- **Approach:** Built on top of the existing AuditLog entity and AuditLogRepository (already in codebase from security epic). Extended the repository with JpaSpecificationExecutor to enable dynamic Specification-based queries. Created AuditLogSpecification with four static filter methods. Added AuditLogDTO record to Responses.java (exposing display-safe fields, excluding actorId). Created AuditLogService delegating to the repository with a composed Specification. Created AuditLogController with @PreAuthorize('hasRole(MANAGER)'), date range validation, and 100-record page size cap. Frontend: added AuditLogEntry/AuditLogPage types, getAuditLogs() with URLSearchParams-based filter query construction, AuditLog.tsx page with filter form/table/pagination, and wired into App.tsx routing and Layout.tsx sidebar (conditional on MANAGER role via getUserRole()).
+
+## WO-081: User Story: WO-081 - Build User Settings and Profile Page
+- **Status:** completed
+- **Commit:** `6a82796`
+- **Files:** 15 (+1264/-4)
+- **Duration:** 737ss
+- **Approach:** Built UserProfileController at /api/users/me with 5 endpoints (GET profile, PUT profile, POST change-password, GET sessions, DELETE sessions/{id}). UserProfileService extracts the authenticated user's email from the JWT principal (Authentication.getName()) to look up the User entity, then delegates to UserRepository and RefreshTokenRepository. Added findAllByUserId and findByIdAndUserId to RefreshTokenRepository. Password change validates current password via BCryptPasswordEncoder.matches(), rejects same-as-current, enforces complexity regex, then deletes all refresh tokens for security. SessionDTO uses createdAt as lastUsedAt fallback since RefreshToken has no lastUsedAt field; ipAddress is null since RefreshToken does not store IP. Frontend Settings.tsx has four sections (Profile, Security, Active Sessions, Appearance) with react-hot-toast notifications. getUserRole() in api.ts updated to call getProfile() at /api/users/me instead of the previously broken /api/auth/me endpoint.

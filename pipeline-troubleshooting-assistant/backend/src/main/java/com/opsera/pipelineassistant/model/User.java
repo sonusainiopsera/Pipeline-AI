@@ -41,6 +41,14 @@ public class User {
     @Builder.Default
     private Boolean mfaEnabled = false;
 
+    private LocalDateTime mfaSetupExpiresAt;
+
+    @Column(columnDefinition = "TEXT")
+    private String recoveryCodes;
+
+    @Column(length = 64)
+    private String mfaChallengeTokenHash;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean emailVerified = false;

@@ -1,6 +1,7 @@
 package com.opsera.pipelineassistant.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -25,5 +26,7 @@ public class ErrorRequest {
 
     @NotBlank(message = "Severity is required")
     @Size(max = 20, message = "Severity exceeds maximum length of 20 characters")
+    @Pattern(regexp = "(?i)low|medium|high|critical",
+             message = "Severity must be one of: low, medium, high, critical")
     private String severity;
 }

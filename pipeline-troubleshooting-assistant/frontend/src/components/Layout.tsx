@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { PanelLeftClose, PanelLeftOpen, BarChart2, Search, BookOpen, Clock } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, BarChart2, Search, BookOpen, Clock, ShieldCheck, Settings } from 'lucide-react';
 import SkipLink from './SkipLink';
+import { getUserRole } from '../api';
+import type { UserRole } from '../api';
 
-export type Page = 'dashboard' | 'analyze' | 'knowledge-base' | 'history';
+export type Page = 'dashboard' | 'analyze' | 'knowledge-base' | 'history' | 'audit-log' | 'settings';
 
 interface NavItem {
   id: Page;
   label: string;
   icon: React.ReactNode;
+  managerOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -15,6 +18,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'analyze', label: 'Analyze', icon: <Search size={18} aria-hidden="true" /> },
   { id: 'knowledge-base', label: 'Knowledge Base', icon: <BookOpen size={18} aria-hidden="true" /> },
   { id: 'history', label: 'History', icon: <Clock size={18} aria-hidden="true" /> },
+  { id: 'audit-log', label: 'Audit Log', icon: <ShieldCheck size={18} aria-hidden="true" />, managerOnly: true },
+  { id: 'settings', label: 'Settings', icon: <Settings size={18} aria-hidden="true" /> },
 ];
 
 interface LayoutProps {
@@ -32,6 +37,12 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
     }
     return true;
   });
+
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    getUserRole().then(setUserRole);
+  }, []);
 
   // When viewport crosses the 768px boundary, auto-close on shrink and
   // auto-open on expand so the layout is always in a sensible default state.
@@ -149,7 +160,7 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
             role="list"
             style={{ listStyle: 'none', margin: 0, padding: '8px 0', flex: 1 }}
           >
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEMS.filter(item => !item.managerOnly || userRole === 'MANAGER').map((item) => (
               <li key={item.id}>
                 <button
                   type="button"

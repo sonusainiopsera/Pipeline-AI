@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,6 +26,14 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     @Transactional
     @Modifying
     void deleteByUserId(UUID userId);
+
+    Optional<RefreshToken> findFirstByUserIdOrderByCreatedAtAsc(UUID userId);
+
+    List<RefreshToken> findAllByUserId(UUID userId);
+
+    Optional<RefreshToken> findByIdAndUserId(UUID id, UUID userId);
+
+    long countByExpiresAtBefore(LocalDateTime cutoff);
 
     @Transactional
     @Modifying

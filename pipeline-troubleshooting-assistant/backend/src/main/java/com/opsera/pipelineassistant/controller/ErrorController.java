@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +20,14 @@ public class ErrorController {
 
     private final KnowledgeBaseService knowledgeBaseService;
 
+    @PreAuthorize("hasAnyRole('ANALYST', 'KB_ADMIN', 'MANAGER')")
     @GetMapping
     public List<ErrorKnowledgeBase> findAll() {
         log.info("GET /api/errors received");
         return knowledgeBaseService.findAll();
     }
 
+    @PreAuthorize("hasAnyRole('KB_ADMIN', 'MANAGER')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ErrorKnowledgeBase create(@Valid @RequestBody ErrorRequest request) {
@@ -39,6 +42,7 @@ public class ErrorController {
         return knowledgeBaseService.create(entry);
     }
 
+    @PreAuthorize("hasAnyRole('KB_ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     public ErrorKnowledgeBase update(@PathVariable Long id, @Valid @RequestBody ErrorRequest request) {
         log.info("PUT /api/errors/{} received", id);
@@ -52,6 +56,7 @@ public class ErrorController {
         return knowledgeBaseService.update(id, entry);
     }
 
+    @PreAuthorize("hasAnyRole('KB_ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
