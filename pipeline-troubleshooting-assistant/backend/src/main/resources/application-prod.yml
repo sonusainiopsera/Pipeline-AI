@@ -4,3 +4,7 @@ spring:
       # Fail fast if the database schema does not match JPA entity definitions.
       # All schema changes must go through versioned Flyway migration scripts.
       ddl-auto: validate
+
+app:
+  cookie:
+    secure: true

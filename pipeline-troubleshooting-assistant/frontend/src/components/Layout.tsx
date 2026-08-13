@@ -1,8 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { PanelLeftClose, PanelLeftOpen, BarChart2, Search, BookOpen, Clock, ShieldCheck, Settings } from 'lucide-react';
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  BarChart2,
+  Search,
+  BookOpen,
+  Clock,
+  ShieldCheck,
+  Settings,
+  LogOut,
+  Moon,
+  Sun,
+} from 'lucide-react';
 import SkipLink from './SkipLink';
 import { getUserRole } from '../api';
 import type { UserRole } from '../api';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 export type Page = 'dashboard' | 'analyze' | 'knowledge-base' | 'history' | 'audit-log' | 'settings';
 
@@ -29,8 +43,10 @@ interface LayoutProps {
 }
 
 export default function Layout({ page, onNavigate, children }: LayoutProps) {
-  // On mobile (< 768px) sidebar starts closed; on desktop it starts open.
-  // Lazy initialiser runs once on mount so there is no flash-of-wrong-state.
+  const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 768;
@@ -44,18 +60,10 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
     getUserRole().then(setUserRole);
   }, []);
 
-  // When viewport crosses the 768px boundary, auto-close on shrink and
-  // auto-open on expand so the layout is always in a sensible default state.
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
     const handleChange = (e: MediaQueryListEvent) => {
-      if (e.matches) {
-        // Became mobile — close sidebar so it doesn't overlay content
-        setSidebarOpen(false);
-      } else {
-        // Became desktop — open sidebar by default
-        setSidebarOpen(true);
-      }
+      setSidebarOpen(!e.matches);
     };
     mq.addEventListener('change', handleChange);
     return () => mq.removeEventListener('change', handleChange);
@@ -63,20 +71,25 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // On mobile: toggle label describes opening/closing the overlay menu.
-  // On desktop: toggle describes collapsing/expanding the sidebar panel.
   const toggleLabel = isMobile
     ? sidebarOpen ? 'Close navigation menu' : 'Open navigation menu'
     : sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar';
 
   const closeSidebar = () => setSidebarOpen(false);
 
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      window.location.href = '/login';
+    }
+  };
+
   return (
     <>
       <SkipLink />
 
-      {/* Semi-transparent backdrop rendered when mobile sidebar is open.
-          CSS hides it on desktop so there is no visual impact there. */}
       {sidebarOpen && (
         <div
           className="sidebar-backdrop"
@@ -87,9 +100,6 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
       )}
 
       <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-        {/* Sidebar navigation.
-            .sidebar-nav — targeted by responsive CSS in styles.css
-            .mobile-open — CSS class that slides the overlay into view on mobile */}
         <nav
           id="sidebar-nav"
           className={`sidebar-nav${sidebarOpen ? ' mobile-open' : ''}`}
@@ -98,14 +108,13 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
             width: sidebarOpen ? '220px' : '60px',
             overflow: 'hidden',
             transition: 'width 0.2s ease',
-            backgroundColor: '#101a2d',
-            color: '#e2e8f0',
+            backgroundColor: 'var(--app-sidebar)',
+            color: 'var(--app-sidebar-text)',
             display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
           }}
         >
-          {/* Sidebar header with toggle button */}
           <div
             style={{
               padding: '12px',
@@ -154,7 +163,6 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
             </button>
           </div>
 
-          {/* Nav items */}
           <ul
             id="sidebar-nav-list"
             role="list"
@@ -166,7 +174,6 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
                   type="button"
                   onClick={() => {
                     onNavigate(item.id);
-                    // Close mobile sidebar after navigation
                     if (typeof window !== 'undefined' && window.innerWidth < 768) {
                       setSidebarOpen(false);
                     }
@@ -197,9 +204,40 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
               </li>
             ))}
           </ul>
+
+          <div className="sidebar-footer">
+            {sidebarOpen && user && (
+              <div className="sidebar-user">
+                <strong>{user.displayName || 'Signed in'}</strong>
+                <span title={user.email}>{user.email}</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="sidebar-action-btn"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            >
+              {theme === 'dark' ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
+              {sidebarOpen && <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>}
+            </button>
+
+            <button
+              type="button"
+              className="sidebar-action-btn danger"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              aria-label="Log out"
+              title="Log out"
+            >
+              <LogOut size={16} aria-hidden="true" />
+              {sidebarOpen && <span>{loggingOut ? 'Signing out…' : 'Log out'}</span>}
+            </button>
+          </div>
         </nav>
 
-        {/* Main content area */}
         <main
           id="main-content"
           tabIndex={-1}
@@ -207,7 +245,8 @@ export default function Layout({ page, onNavigate, children }: LayoutProps) {
             flex: 1,
             padding: '28px',
             minWidth: 0,
-            backgroundColor: '#f8fafc',
+            backgroundColor: 'var(--app-bg)',
+            color: 'var(--color-text-primary)',
           }}
         >
           {children}

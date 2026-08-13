@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { Toaster } from 'react-hot-toast';
 import Layout, { Page } from './components/Layout';
 import RouteAnnouncer from './components/RouteAnnouncer';
+import ProtectedRoute from './components/ProtectedRoute';
 import DashboardPage from './pages/Dashboard';
 import AnalyzePage from './pages/Analyze';
 import KnowledgeBasePage from './pages/KnowledgeBase';
@@ -12,6 +14,7 @@ import RegisterPage from './pages/Register';
 import MfaVerifyPage from './pages/MfaVerify';
 import MfaEnrollPage from './pages/MfaEnroll';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 function getAuthRoute(): string | null {
   if (typeof window === 'undefined') return null;
@@ -23,21 +26,36 @@ function getAuthRoute(): string | null {
   return null;
 }
 
+function withProviders(children: React.ReactNode) {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <Toaster position="top-right" />
+        {children}
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
 export default function App() {
-  const [page, setPage] = useState<Page>('analyze');
+  const [page, setPage] = useState<Page>('dashboard');
   const authRoute = getAuthRoute();
 
   if (authRoute === 'login') {
-    return <AuthProvider><LoginPage /></AuthProvider>;
+    return withProviders(<LoginPage />);
   }
   if (authRoute === 'register') {
-    return <AuthProvider><RegisterPage /></AuthProvider>;
+    return withProviders(<RegisterPage />);
   }
   if (authRoute === 'mfa-verify') {
-    return <AuthProvider><MfaVerifyPage /></AuthProvider>;
+    return withProviders(<MfaVerifyPage />);
   }
   if (authRoute === 'mfa-enroll') {
-    return <AuthProvider><MfaEnrollPage /></AuthProvider>;
+    return withProviders(
+      <ProtectedRoute>
+        <MfaEnrollPage />
+      </ProtectedRoute>,
+    );
   }
 
   const renderPage = () => {
@@ -57,13 +75,12 @@ export default function App() {
     }
   };
 
-  return (
-    <AuthProvider>
-      {/* Announces page transitions to screen readers and updates document.title */}
+  return withProviders(
+    <ProtectedRoute>
       <RouteAnnouncer page={page} />
       <Layout page={page} onNavigate={setPage}>
         {renderPage()}
       </Layout>
-    </AuthProvider>
+    </ProtectedRoute>,
   );
 }

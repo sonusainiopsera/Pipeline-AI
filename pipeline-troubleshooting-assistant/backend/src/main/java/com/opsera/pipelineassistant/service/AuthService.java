@@ -6,6 +6,7 @@ import com.opsera.pipelineassistant.audit.AuditService;
 import com.opsera.pipelineassistant.dto.Responses.LoginResponse;
 import com.opsera.pipelineassistant.dto.Responses.LoginResult;
 import com.opsera.pipelineassistant.dto.Responses.RefreshResult;
+import com.opsera.pipelineassistant.dto.Responses.RegistrationResult;
 import com.opsera.pipelineassistant.exception.AccountLockedException;
 import com.opsera.pipelineassistant.exception.EmailNotVerifiedException;
 import com.opsera.pipelineassistant.model.RefreshToken;
@@ -55,6 +56,9 @@ public class AuthService {
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationSeconds;
+
+    @Value("${app.base-url:http://localhost:5173}")
+    private String baseUrl = "http://localhost:5173";
 
     @Transactional
     public LoginResult login(String email, String password) {
@@ -122,8 +126,7 @@ public class AuthService {
             user.setMfaChallengeTokenHash(hashToken(challengeToken));
             userRepository.save(user);
             log.info("MFA challenge issued for '{}'", normalizedEmail);
-            LoginResponse profile = new LoginResponse(
-                    user.getEmail(), user.getDisplayName(), user.getRole().name(), true);
+            LoginResponse profile = LoginResponse.from(user, true);
             return new LoginResult(null, null, profile, challengeToken);
         }
 
@@ -294,13 +297,19 @@ public class AuthService {
                 .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpirationSeconds))
                 .build());
 
-        LoginResponse profile = new LoginResponse(
-                user.getEmail(), user.getDisplayName(), user.getRole().name(), false);
+        LoginResponse profile = LoginResponse.from(user, false);
         return new LoginResult(accessToken, rawRefreshToken, profile, null);
     }
 
+    @Transactional(readOnly = true)
+    public LoginResponse currentUser(String email) {
+        User user = userRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated"));
+        return LoginResponse.from(user, false);
+    }
+
     @Transactional
-    public User register(String email, String password, String displayName) {
+    public RegistrationResult register(String email, String password, String displayName) {
         String normalizedEmail = email.trim().toLowerCase();
 
         if (password.length() < 12 || !PASSWORD_COMPLEXITY.matcher(password).matches()) {
@@ -322,6 +331,7 @@ public class AuthService {
                 .verificationTokenExpiry(LocalDateTime.now().plusHours(24))
                 .build();
         User saved = userRepository.save(user);
+        String verificationUrl = buildVerificationUrl(token);
         emailService.sendVerificationEmail(normalizedEmail, token);
         log.info("Registered user '{}' — verification email dispatched", normalizedEmail);
         try {
@@ -330,7 +340,15 @@ public class AuthService {
         } catch (Exception e) {
             log.warn("Failed to audit registration for '{}': {}", normalizedEmail, e.getMessage());
         }
-        return saved;
+        return new RegistrationResult(saved, verificationUrl);
+    }
+
+    String buildVerificationUrl(String token) {
+        String root = baseUrl == null || baseUrl.isBlank() ? "http://localhost:5173" : baseUrl.trim();
+        if (root.endsWith("/")) {
+            root = root.substring(0, root.length() - 1);
+        }
+        return root + "/api/auth/verify?token=" + token;
     }
 
     @Transactional
@@ -418,19 +436,26 @@ public class AuthService {
         }
     }
 
+    /**
+     * Resends a verification email when the account exists and is unverified.
+     * @return verification URL when a mail was (re)sent; otherwise {@code null}
+     */
     @Transactional
-    public void resendVerification(String email) {
-        userRepository.findByEmail(email).ifPresent(user -> {
+    public String resendVerification(String email) {
+        String normalizedEmail = email.trim().toLowerCase();
+        return userRepository.findByEmail(normalizedEmail).map(user -> {
             if (Boolean.TRUE.equals(user.getEmailVerified())) {
-                return;
+                return null;
             }
             String token = UUID.randomUUID().toString();
             user.setVerificationToken(token);
             user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
             userRepository.save(user);
-            emailService.sendVerificationEmail(email, token);
-            log.info("Resent verification email to '{}'", email);
-        });
+            String verificationUrl = buildVerificationUrl(token);
+            emailService.sendVerificationEmail(normalizedEmail, token);
+            log.info("Resent verification email to '{}'", normalizedEmail);
+            return verificationUrl;
+        }).orElse(null);
     }
 
     String hashToken(String rawToken) {

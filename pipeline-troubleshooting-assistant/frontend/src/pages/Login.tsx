@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { login as apiLogin, ApiError } from '../api';
+import { login as apiLogin, resendVerification, ApiError } from '../api';
 
 const cardContainerStyle: React.CSSProperties = {
   minHeight: '100vh',
@@ -57,9 +57,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +87,9 @@ export default function LoginPage() {
 
     setLoading(true);
     setError(null);
+    setNeedsVerification(false);
+    setVerificationUrl(null);
+    setResendMessage(null);
 
     try {
       const response = await apiLogin({ email: email.trim(), password });
@@ -94,9 +101,31 @@ export default function LoginPage() {
         window.location.href = '/';
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Login failed. Please try again.');
+      const message = err instanceof ApiError ? err.message : 'Login failed. Please try again.';
+      setError(message);
+      if (/verify your email/i.test(message)) {
+        setNeedsVerification(true);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      return;
+    }
+    setResending(true);
+    setResendMessage(null);
+    try {
+      const response = await resendVerification(email.trim());
+      setResendMessage(response.message);
+      setVerificationUrl(response.verificationUrl ?? null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not resend verification.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -157,6 +186,41 @@ export default function LoginPage() {
             <p role="alert" style={{ color: '#b91c1c', margin: '0 0 16px', fontSize: '0.9em' }}>
               {error}
             </p>
+          )}
+
+          {needsVerification && (
+            <div style={{ marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending}
+                style={{
+                  ...primaryBtnStyle,
+                  backgroundColor: '#ffffff',
+                  color: '#101a2d',
+                  border: '1px solid #101a2d',
+                  marginBottom: '8px',
+                  opacity: resending ? 0.5 : 1,
+                }}
+              >
+                {resending ? 'Sending…' : 'Resend verification link'}
+              </button>
+              {resendMessage && (
+                <p role="status" style={{ color: '#15803d', fontSize: '0.85em', margin: '0 0 8px' }}>
+                  {resendMessage}
+                </p>
+              )}
+              {verificationUrl && (
+                <>
+                  <p style={{ color: '#475569', fontSize: '0.85em', margin: '0 0 8px' }}>
+                    Local development does not send real email. Open this link:
+                  </p>
+                  <a href={verificationUrl} style={{ color: '#1d4ed8', fontSize: '0.85em', wordBreak: 'break-all' }}>
+                    {verificationUrl}
+                  </a>
+                </>
+              )}
+            </div>
           )}
 
           <button

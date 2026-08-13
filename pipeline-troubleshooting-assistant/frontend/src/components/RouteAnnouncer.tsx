@@ -6,6 +6,8 @@ const PAGE_TITLES: Record<Page, string> = {
   analyze: 'Analyze Pipeline Log',
   'knowledge-base': 'Knowledge Base',
   history: 'Analysis History',
+  'audit-log': 'Audit Log',
+  settings: 'Settings',
 };
 
 // Visually-hidden style — element is in the DOM for screen readers but invisible.

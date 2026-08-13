@@ -13,9 +13,11 @@ services:
     build:
       context: ./backend
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SPRING_PROFILES_ACTIVE: "dev,auth-required"
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       SPRING_DATASOURCE_URL: ${DB_URL:?Set DB_URL in .env}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in .env}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
@@ -44,7 +46,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:80 || exit 1"]
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:80 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3

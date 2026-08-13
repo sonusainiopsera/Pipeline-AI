@@ -106,17 +106,16 @@ class ErrorControllerRbacTest {
         mockMvc.perform(get("/api/errors")).andExpect(status().isForbidden());
     }
 
-    // ── POST /api/errors — KB_ADMIN and MANAGER only ──────────────────────────
+    // ── POST /api/errors — ANALYST, KB_ADMIN, and MANAGER ─────────────────────
 
     @Test
     @WithMockUser(roles = "ANALYST")
-    void create_analyst_returns403() throws Exception {
+    void create_analyst_returns201() throws Exception {
+        stubCreate();
         mockMvc.perform(post("/api/errors")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validRequest())))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("Access denied"));
+                .andExpect(status().isCreated());
     }
 
     @Test
@@ -139,17 +138,16 @@ class ErrorControllerRbacTest {
                 .andExpect(status().isCreated());
     }
 
-    // ── PUT /api/errors/{id} — KB_ADMIN and MANAGER only ─────────────────────
+    // ── PUT /api/errors/{id} — ANALYST, KB_ADMIN, and MANAGER ────────────────
 
     @Test
     @WithMockUser(roles = "ANALYST")
-    void update_analyst_returns403() throws Exception {
+    void update_analyst_returns200() throws Exception {
+        stubUpdate();
         mockMvc.perform(put("/api/errors/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validRequest())))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("Access denied"));
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -172,15 +170,13 @@ class ErrorControllerRbacTest {
                 .andExpect(status().isOk());
     }
 
-    // ── DELETE /api/errors/{id} — KB_ADMIN and MANAGER only ──────────────────
+    // ── DELETE /api/errors/{id} — ANALYST, KB_ADMIN, and MANAGER ─────────────
 
     @Test
     @WithMockUser(roles = "ANALYST")
-    void delete_analyst_returns403() throws Exception {
-        mockMvc.perform(delete("/api/errors/1"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("Access denied"));
+    void delete_analyst_returns204() throws Exception {
+        stubDelete();
+        mockMvc.perform(delete("/api/errors/1")).andExpect(status().isNoContent());
     }
 
     @Test

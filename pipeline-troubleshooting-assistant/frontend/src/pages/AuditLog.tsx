@@ -169,7 +169,7 @@ export default function AuditLogPage() {
     <div>
       <PageHeader
         title="Audit Log"
-        subtitle={`Immutable record of all system mutations and authentication events${totalElements > 0 ? ` · ${totalElements.toLocaleString()} entries` : ''}`}
+        description={`Immutable record of all system mutations and authentication events${totalElements > 0 ? ` · ${totalElements.toLocaleString()} entries` : ''}`}
       />
 
       {/* Filter form */}

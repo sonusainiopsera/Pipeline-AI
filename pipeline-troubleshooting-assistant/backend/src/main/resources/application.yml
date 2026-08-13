@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: auth-optional
+    active: auth-required,dev
   application:
     name: pipeline-assistant
   datasource:
@@ -43,7 +43,10 @@ app:
   cors:
     # Resolved from environment variable; default is LOCAL-DEVELOPMENT-ONLY
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
-  base-url: ${APP_BASE_URL:http://localhost:8080}
+  base-url: ${APP_BASE_URL:http://localhost:5173}
+  # Secure cookies require HTTPS; keep false for local HTTP, true in production
+  cookie:
+    secure: ${COOKIE_SECURE:false}
   # Set to false in test application properties to disable @Scheduled tasks
   scheduler:
     enabled: true

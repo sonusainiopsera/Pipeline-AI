@@ -98,13 +98,28 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     let message = res.statusText;
+    const fieldErrors: Record<string, string> = {};
     try {
-      const body = (await res.json()) as { message?: string };
+      const body = (await res.json()) as {
+        message?: string;
+        errors?: Array<{ field?: string; message?: string }>;
+      };
       if (body.message) message = body.message;
+      if (Array.isArray(body.errors)) {
+        for (const err of body.errors) {
+          if (err.field && err.message && !fieldErrors[err.field]) {
+            fieldErrors[err.field] = err.message;
+          }
+        }
+        const details = Object.values(fieldErrors);
+        if (details.length > 0) {
+          message = details.join(' ');
+        }
+      }
     } catch {
       // ignore parse errors
     }
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, message, fieldErrors);
   }
 
   if (res.status === 204) return undefined as T;
@@ -141,6 +156,7 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    public readonly fieldErrors: Record<string, string> = {},
   ) {
     super(message);
     this.name = 'ApiError';

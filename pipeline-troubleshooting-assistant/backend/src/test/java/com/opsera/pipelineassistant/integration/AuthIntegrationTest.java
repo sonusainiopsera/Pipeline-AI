@@ -275,7 +275,7 @@ class AuthIntegrationTest {
     // ── AC3: ANALYST RBAC ─────────────────────────────────────────────────────
 
     @Test
-    void analyst_canReadErrors_cannotWriteErrors() {
+    void analyst_canReadAndWriteErrors() {
         String email = uniqueEmail();
         registerAndVerify(email);
         Map<String, String> cookies = login(email);
@@ -286,7 +286,7 @@ class AuthIntegrationTest {
                 jsonEntity(null, cookies), List.class);
         assertThat(getResp.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        // ANALYST cannot POST /api/errors
+        // ANALYST can POST /api/errors
         Map<String, String> errorBody = Map.of(
                 "errorPattern", "OutOfMemoryError",
                 "category", "Memory",
@@ -296,7 +296,7 @@ class AuthIntegrationTest {
         ResponseEntity<Map> postResp = rest.exchange(
                 url("/api/errors"), HttpMethod.POST,
                 jsonEntity(errorBody, cookies), Map.class);
-        assertThat(postResp.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(postResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }
 
     @Test

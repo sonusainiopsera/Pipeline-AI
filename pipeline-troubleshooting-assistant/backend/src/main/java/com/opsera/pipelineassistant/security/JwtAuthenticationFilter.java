@@ -25,10 +25,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService customUserDetailsService;
 
+    private static final java.util.Set<String> AUTH_PATHS_REQUIRING_JWT = java.util.Set.of(
+            "/api/auth/me",
+            "/api/auth/mfa/setup",
+            "/api/auth/mfa/verify"
+    );
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith("/api/auth/") || path.startsWith("/actuator/");
+        if (path.startsWith("/actuator/")) {
+            return true;
+        }
+        if (path.startsWith("/api/auth/")) {
+            // Still authenticate JWT for protected auth endpoints (me / MFA setup)
+            return !AUTH_PATHS_REQUIRING_JWT.contains(path);
+        }
+        return false;
     }
 
     @Override

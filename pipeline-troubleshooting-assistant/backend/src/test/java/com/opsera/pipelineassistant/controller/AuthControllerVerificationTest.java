@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.pipelineassistant.dto.ResendVerificationRequest;
 import com.opsera.pipelineassistant.security.CustomUserDetailsService;
 import com.opsera.pipelineassistant.security.JwtTokenProvider;
+import com.opsera.pipelineassistant.security.MfaService;
 import com.opsera.pipelineassistant.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,6 +34,9 @@ class AuthControllerVerificationTest {
 
     @MockBean
     private AuthService authService;
+
+    @MockBean
+    private MfaService mfaService;
 
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
@@ -75,7 +80,7 @@ class AuthControllerVerificationTest {
 
     @Test
     void resendVerification_validEmail_returns200() throws Exception {
-        doNothing().when(authService).resendVerification("user@example.com");
+        when(authService.resendVerification("user@example.com")).thenReturn(null);
 
         ResendVerificationRequest request = new ResendVerificationRequest();
         request.setEmail("user@example.com");

@@ -11,12 +11,14 @@ import com.opsera.pipelineassistant.dto.Responses.LoginResult;
 import com.opsera.pipelineassistant.dto.Responses.MfaSetupResponse;
 import com.opsera.pipelineassistant.dto.Responses.RefreshResult;
 import com.opsera.pipelineassistant.dto.Responses.RegisterResponse;
+import com.opsera.pipelineassistant.dto.Responses.RegistrationResult;
 import com.opsera.pipelineassistant.security.MfaService;
 import com.opsera.pipelineassistant.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -38,6 +41,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final MfaService mfaService;
+    private final Environment environment;
 
     @Value("${jwt.access-token-expiration}")
     private long accessTokenExpirationSeconds;
@@ -48,27 +52,37 @@ public class AuthController {
     @Value("${mfa.challenge-token-expiration:300}")
     private long mfaChallengeTokenExpirationSeconds;
 
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
+
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("POST /api/auth/login");
         LoginResult result = authService.login(request.getEmail(), request.getPassword());
 
         if (result.challengeToken() != null) {
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE,
-                            buildCookie("mfa_challenge", result.challengeToken(),
-                                    Duration.ofSeconds(mfaChallengeTokenExpirationSeconds), "/api/auth/mfa").toString())
-                    .body(result.profile());
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.SET_COOKIE,
+                    buildCookie("mfa_challenge", result.challengeToken(),
+                            Duration.ofSeconds(mfaChallengeTokenExpirationSeconds), "/api/auth/mfa").toString());
+            return new ResponseEntity<>(result.profile(), headers, HttpStatus.OK);
         }
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE,
-                        buildCookie("access_token", result.accessToken(),
-                                Duration.ofSeconds(accessTokenExpirationSeconds)).toString())
-                .header(HttpHeaders.SET_COOKIE,
-                        buildCookie("refresh_token", result.rawRefreshToken(),
-                                Duration.ofSeconds(refreshTokenExpirationSeconds), "/api/auth").toString())
-                .body(result.profile());
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.SET_COOKIE,
+                buildCookie("access_token", result.accessToken(),
+                        Duration.ofSeconds(accessTokenExpirationSeconds), "/").toString());
+        headers.add(HttpHeaders.SET_COOKIE,
+                buildCookie("refresh_token", result.rawRefreshToken(),
+                        Duration.ofSeconds(refreshTokenExpirationSeconds), "/api/auth").toString());
+        return new ResponseEntity<>(result.profile(), headers, HttpStatus.OK);
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<LoginResponse> me(@AuthenticationPrincipal UserDetails userDetails) {
+        log.info("GET /api/auth/me");
+        return ResponseEntity.ok(authService.currentUser(userDetails.getUsername()));
     }
 
     @PostMapping("/mfa/challenge")
@@ -157,9 +171,12 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         log.info("POST /api/auth/register");
-        authService.register(request.getEmail(), request.getPassword(), request.getDisplayName());
+        RegistrationResult result = authService.register(
+                request.getEmail(), request.getPassword(), request.getDisplayName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new RegisterResponse("Registration successful. Please verify your email."));
+                .body(new RegisterResponse(
+                        "Registration successful. Please verify your email.",
+                        exposeVerificationUrl() ? result.verificationUrl() : null));
     }
 
     @GetMapping("/verify")
@@ -169,16 +186,21 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Email verified successfully. You can now log in."));
     }
 
+    private boolean exposeVerificationUrl() {
+        // Local/dev has no SMTP — surface the link in API responses for the UI.
+        return environment.matchesProfiles("dev");
+    }
+
     private ResponseCookie buildCookie(String name, String value, Duration maxAge) {
-        return buildCookie(name, value, maxAge, "/api");
+        return buildCookie(name, value, maxAge, "/");
     }
 
     private ResponseCookie buildCookie(String name, String value, Duration maxAge, String path) {
         return ResponseCookie.from(name, value)
                 .maxAge(maxAge)
                 .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")
+                .secure(cookieSecure)
+                .sameSite("Lax")
                 .path(path)
                 .build();
     }
@@ -187,9 +209,9 @@ public class AuthController {
         return ResponseCookie.from(name, "")
                 .maxAge(0)
                 .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")
-                .path("/api")
+                .secure(cookieSecure)
+                .sameSite("Lax")
+                .path("/")
                 .build();
     }
 
@@ -197,8 +219,13 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> resendVerification(
             @Valid @RequestBody ResendVerificationRequest request) {
         log.info("POST /api/auth/verify/resend");
-        authService.resendVerification(request.getEmail());
-        return ResponseEntity.ok(Map.of("message", "Verification email sent."));
+        String verificationUrl = authService.resendVerification(request.getEmail());
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("message", "Verification email sent.");
+        if (exposeVerificationUrl() && verificationUrl != null) {
+            body.put("verificationUrl", verificationUrl);
+        }
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping("/mfa/setup")

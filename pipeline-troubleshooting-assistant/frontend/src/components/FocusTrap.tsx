@@ -18,27 +18,40 @@ interface FocusTrapProps {
 /**
  * Constrains Tab cycling to focusable descendants when active.
  * Calls onEscape when the Escape key is pressed.
- * Focuses the first focusable child when activated.
+ * Focuses the first focusable child only when the trap first becomes active
+ * (not on every parent re-render).
  */
 export default function FocusTrap({ active, onEscape, children }: FocusTrapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const onEscapeRef = useRef(onEscape);
+  const wasActiveRef = useRef(false);
+
+  onEscapeRef.current = onEscape;
 
   useEffect(() => {
-    if (!active || !containerRef.current) return;
+    if (!active || !containerRef.current) {
+      wasActiveRef.current = active;
+      return;
+    }
 
     const container = containerRef.current;
     const getFocusable = () =>
       Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS));
 
-    const focusable = getFocusable();
-    if (focusable.length > 0) {
-      focusable[0].focus();
+    // Only auto-focus when the trap transitions from inactive → active.
+    // Re-running this on every parent render (e.g. form keystrokes) steals focus.
+    if (!wasActiveRef.current) {
+      const focusable = getFocusable();
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      }
     }
+    wasActiveRef.current = true;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onEscape();
+        onEscapeRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -54,17 +67,21 @@ export default function FocusTrap({ active, onEscape, children }: FocusTrapProps
           e.preventDefault();
           last.focus();
         }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
+      } else if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [active, onEscape]);
+  }, [active]);
+
+  useEffect(() => {
+    if (!active) {
+      wasActiveRef.current = false;
+    }
+  }, [active]);
 
   return <div ref={containerRef}>{children}</div>;
 }

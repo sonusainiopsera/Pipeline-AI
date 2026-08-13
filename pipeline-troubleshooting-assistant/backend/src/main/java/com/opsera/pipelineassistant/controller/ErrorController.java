@@ -27,7 +27,7 @@ public class ErrorController {
         return knowledgeBaseService.findAll();
     }
 
-    @PreAuthorize("hasAnyRole('KB_ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ANALYST', 'KB_ADMIN', 'MANAGER')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ErrorKnowledgeBase create(@Valid @RequestBody ErrorRequest request) {
@@ -42,7 +42,7 @@ public class ErrorController {
         return knowledgeBaseService.create(entry);
     }
 
-    @PreAuthorize("hasAnyRole('KB_ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ANALYST', 'KB_ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     public ErrorKnowledgeBase update(@PathVariable Long id, @Valid @RequestBody ErrorRequest request) {
         log.info("PUT /api/errors/{} received", id);
@@ -56,7 +56,7 @@ public class ErrorController {
         return knowledgeBaseService.update(id, entry);
     }
 
-    @PreAuthorize("hasAnyRole('KB_ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ANALYST', 'KB_ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {

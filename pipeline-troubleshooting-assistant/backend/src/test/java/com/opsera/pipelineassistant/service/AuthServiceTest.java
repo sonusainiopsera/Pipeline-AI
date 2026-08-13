@@ -3,6 +3,7 @@ package com.opsera.pipelineassistant.service;
 import com.opsera.pipelineassistant.model.Role;
 import com.opsera.pipelineassistant.model.User;
 import com.opsera.pipelineassistant.repository.UserRepository;
+import com.opsera.pipelineassistant.dto.Responses.RegistrationResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -48,14 +49,15 @@ class AuthServiceTest {
         when(passwordEncoder.encode(VALID_PASSWORD)).thenReturn("$2a$12$hashed");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        User result = authService.register(VALID_EMAIL, VALID_PASSWORD, DISPLAY_NAME);
+        var result = authService.register(VALID_EMAIL, VALID_PASSWORD, DISPLAY_NAME);
 
-        assertThat(result.getEmail()).isEqualTo(VALID_EMAIL);
-        assertThat(result.getDisplayName()).isEqualTo(DISPLAY_NAME);
-        assertThat(result.getPasswordHash()).isEqualTo("$2a$12$hashed");
-        assertThat(result.getEmailVerified()).isFalse();
-        assertThat(result.getMfaEnabled()).isFalse();
-        assertThat(result.getRole()).isEqualTo(Role.ANALYST);
+        assertThat(result.user().getEmail()).isEqualTo(VALID_EMAIL);
+        assertThat(result.user().getDisplayName()).isEqualTo(DISPLAY_NAME);
+        assertThat(result.user().getPasswordHash()).isEqualTo("$2a$12$hashed");
+        assertThat(result.user().getEmailVerified()).isFalse();
+        assertThat(result.user().getMfaEnabled()).isFalse();
+        assertThat(result.user().getRole()).isEqualTo(Role.ANALYST);
+        assertThat(result.verificationUrl()).contains("/api/auth/verify?token=");
     }
 
     @Test

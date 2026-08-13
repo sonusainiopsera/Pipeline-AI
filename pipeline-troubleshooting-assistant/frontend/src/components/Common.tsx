@@ -8,10 +8,9 @@ interface PageHeaderProps {
 export function PageHeader({ title, description }: PageHeaderProps) {
   return (
     <div style={{ marginBottom: '24px' }}>
-      <h1 style={{ margin: '0 0 4px', fontSize: '1.5rem' }}>{title}</h1>
+      <h1 style={{ margin: '0 0 4px', fontSize: '1.5rem', color: 'var(--color-text-primary)' }}>{title}</h1>
       {description && (
-        // #475569 on #f8fafc: ~6.8:1 — passes 4.5:1 ✓
-        <p style={{ margin: 0, color: '#475569', fontSize: '0.9em' }}>{description}</p>
+        <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9em' }}>{description}</p>
       )}
     </div>
   );
@@ -19,8 +18,7 @@ export function PageHeader({ title, description }: PageHeaderProps) {
 
 export function Loading({ message = 'Loading...' }: { message?: string }) {
   return (
-    // #475569 on #f8fafc: ~6.8:1 — passes 4.5:1 ✓
-    <p role="status" aria-live="polite" style={{ color: '#475569' }}>
+    <p role="status" aria-live="polite" style={{ color: 'var(--color-text-secondary)' }}>
       {message}
     </p>
   );
@@ -28,8 +26,7 @@ export function Loading({ message = 'Loading...' }: { message?: string }) {
 
 export function ErrorDisplay({ message }: { message: string }) {
   return (
-    // #b91c1c on #f8fafc: ~6.2:1 — passes 4.5:1 ✓
-    <p role="alert" style={{ color: '#b91c1c' }}>
+    <p role="alert" style={{ color: 'var(--color-text-error)' }}>
       Error: {message}
     </p>
   );

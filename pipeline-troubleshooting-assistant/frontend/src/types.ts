@@ -152,6 +152,7 @@ export interface LoginResponse {
 
 export interface AuthMessageResponse {
   message: string;
+  verificationUrl?: string | null;
 }
 
 export interface MfaSetupResponse {

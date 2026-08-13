@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Plus, Pencil, Trash2, X, Search, BookOpen, AlertTriangle } from 'lucide-react';
 import {
   KnowledgeBaseEntry,
   KnowledgeBaseRequest,
@@ -10,6 +10,7 @@ import {
   deleteKnowledgeBaseEntry,
   getUserRole,
 } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 import { PageHeader, Loading, ErrorDisplay } from '../components/Common';
 import FocusTrap from '../components/FocusTrap';
 
@@ -23,34 +24,49 @@ const EMPTY_FORM: KnowledgeBaseRequest = {
   severity: 'MEDIUM',
 };
 
-const INPUT_STYLE: React.CSSProperties = {
-  width: '100%',
-  padding: '8px',
-  // #64748b border on #fff: ~4.2:1 — passes 3:1 UI boundary ✓
-  border: '1px solid #64748b',
-  borderRadius: '4px',
-  fontSize: '0.9em',
-  boxSizing: 'border-box',
+const SEVERITY_STYLES: Record<string, { bg: string; color: string; border: string }> = {
+  CRITICAL: { bg: '#fef2f2', color: '#991b1b', border: '#fecaca' },
+  HIGH: { bg: '#fff7ed', color: '#9a3412', border: '#fed7aa' },
+  MEDIUM: { bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+  LOW: { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
 };
 
-const LABEL_STYLE: React.CSSProperties = {
-  display: 'block',
-  marginBottom: '4px',
-  fontSize: '0.85em',
-  fontWeight: 600,
-  // #374151 on #fff: ~10.3:1 — passes 4.5:1 ✓ (unchanged, already compliant)
-  color: '#374151',
-};
+function canMutateKb(role: UserRole | null | undefined): boolean {
+  return role === 'ANALYST' || role === 'KB_ADMIN' || role === 'MANAGER';
+}
 
-function canMutateKb(role: UserRole | null): boolean {
-  return role === 'KB_ADMIN' || role === 'MANAGER';
+function SeverityBadge({ severity }: { severity: string }) {
+  const key = severity.toUpperCase();
+  const style = SEVERITY_STYLES[key] ?? SEVERITY_STYLES.MEDIUM;
+  return (
+    <span
+      className="kb-severity-badge"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '3px 10px',
+        borderRadius: '999px',
+        fontSize: '0.75em',
+        fontWeight: 700,
+        letterSpacing: '0.04em',
+        background: style.bg,
+        color: style.color,
+        border: `1px solid ${style.border}`,
+      }}
+    >
+      {key}
+    </span>
+  );
 }
 
 export default function KnowledgeBasePage() {
+  const { user } = useAuth();
   const [entries, setEntries] = useState<KnowledgeBaseEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
 
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [formData, setFormData] = useState<KnowledgeBaseRequest>(EMPTY_FORM);
@@ -62,6 +78,9 @@ export default function KnowledgeBasePage() {
   const triggerRef = useRef<HTMLElement | null>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
 
+  const effectiveRole = (userRole ?? (user?.role as UserRole | undefined) ?? null);
+  const canMutate = canMutateKb(effectiveRole);
+
   useEffect(() => {
     getKnowledgeBase()
       .then(setEntries)
@@ -72,6 +91,25 @@ export default function KnowledgeBasePage() {
   useEffect(() => {
     getUserRole().then(setUserRole);
   }, []);
+
+  const categories = useMemo(() => {
+    const set = new Set(entries.map((e) => e.category).filter(Boolean));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [entries]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return entries.filter((entry) => {
+      if (categoryFilter !== 'ALL' && entry.category !== categoryFilter) return false;
+      if (!q) return true;
+      return (
+        entry.errorPattern.toLowerCase().includes(q) ||
+        entry.category.toLowerCase().includes(q) ||
+        (entry.rootCause ?? '').toLowerCase().includes(q) ||
+        (entry.solution ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [entries, search, categoryFilter]);
 
   const openAddModal = () => {
     triggerRef.current = addButtonRef.current;
@@ -158,31 +196,18 @@ export default function KnowledgeBasePage() {
   const isDeleteModalOpen = modalMode === 'delete';
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+    <div className="kb-page">
+      <div className="kb-header-row">
         <PageHeader
           title="Knowledge Base"
           description="Manage known error patterns and their solutions"
         />
-        {canMutateKb(userRole) && (
+        {canMutate && (
           <button
             ref={addButtonRef}
             type="button"
+            className="kb-btn kb-btn-primary"
             onClick={openAddModal}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              backgroundColor: '#2563eb',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.9em',
-              flexShrink: 0,
-            }}
           >
             <Plus size={16} aria-hidden="true" />
             Add Entry
@@ -190,118 +215,127 @@ export default function KnowledgeBasePage() {
         )}
       </div>
 
+      {!loading && !error && (
+        <div className="kb-toolbar">
+          <div className="kb-search">
+            <Search size={16} aria-hidden="true" className="kb-search-icon" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search patterns, categories, causes…"
+              aria-label="Search knowledge base"
+            />
+          </div>
+          <select
+            className="kb-filter"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            aria-label="Filter by category"
+          >
+            <option value="ALL">All categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <div className="kb-count" aria-live="polite">
+            {filtered.length} of {entries.length} entries
+          </div>
+        </div>
+      )}
+
       {loading && <Loading message="Loading knowledge base..." />}
       {error && <ErrorDisplay message={error} />}
 
       {!loading && !error && entries.length === 0 && (
-        <p style={{ color: '#475569' }}>
-          {/* #475569 on #f8fafc: ~6.8:1 — passes 4.5:1 ✓ */}
-          {canMutateKb(userRole) ? (
-            <>
-              No entries yet.{' '}
-              <button
-                type="button"
-                onClick={openAddModal}
-                style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, textDecoration: 'underline', fontSize: 'inherit' }}
-              >
-                Add the first entry
-              </button>{' '}
-              to get started.
-            </>
-          ) : (
-            'No entries yet.'
+        <div className="kb-empty">
+          <BookOpen size={28} aria-hidden="true" />
+          <h2>No knowledge base entries yet</h2>
+          <p>
+            {canMutate
+              ? 'Add known pipeline failure patterns so analysis can suggest fixes faster.'
+              : 'Ask a KB admin or manager to add the first entry.'}
+          </p>
+          {canMutate && (
+            <button type="button" className="kb-btn kb-btn-primary" onClick={openAddModal}>
+              <Plus size={16} aria-hidden="true" />
+              Add the first entry
+            </button>
           )}
-        </p>
-      )}
-
-      {!loading && !error && entries.length > 0 && (
-        <div className="kb-table-container">
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
-          <thead>
-            {/* #64748b border: ~4.0:1 on #f8fafc — passes 3:1 UI boundary ✓ */}
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #64748b' }}>
-              <th style={{ padding: '8px' }}>Error Pattern</th>
-              <th style={{ padding: '8px' }}>Category</th>
-              <th className="col-severity" style={{ padding: '8px' }}>Severity</th>
-              <th style={{ padding: '8px' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={entry.id} style={{ borderBottom: '1px solid #64748b' }}>
-                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>
-                  {entry.errorPattern}
-                </td>
-                <td style={{ padding: '8px' }}>{entry.category}</td>
-                <td className="col-severity" style={{ padding: '8px' }}>{entry.severity}</td>
-                <td style={{ padding: '8px' }}>
-                  {canMutateKb(userRole) && (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        type="button"
-                        aria-label={`Edit entry: ${entry.errorPattern}`}
-                        onClick={(e) => openEditModal(entry, e.currentTarget)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '5px 10px',
-                          // #64748b border on #fff: ~4.2:1 — passes 3:1 UI boundary ✓
-                          border: '1px solid #64748b',
-                          borderRadius: '4px',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          fontSize: '0.85em',
-                        }}
-                      >
-                        <Pencil size={14} aria-hidden="true" />
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Delete entry: ${entry.errorPattern}`}
-                        onClick={(e) => openDeleteModal(entry, e.currentTarget)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '5px 10px',
-                          // #b91c1c border on #fff: ~6.5:1 — passes 3:1 UI boundary ✓
-                          border: '1px solid #b91c1c',
-                          borderRadius: '4px',
-                          background: '#fff',
-                          // #b91c1c text on #fff: ~6.5:1 — passes 4.5:1 ✓
-                          color: '#b91c1c',
-                          cursor: 'pointer',
-                          fontSize: '0.85em',
-                        }}
-                      >
-                        <Trash2 size={14} aria-hidden="true" />
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
         </div>
       )}
 
-      {/* Add / Edit modal */}
+      {!loading && !error && entries.length > 0 && filtered.length === 0 && (
+        <div className="kb-empty">
+          <Search size={28} aria-hidden="true" />
+          <h2>No matches</h2>
+          <p>Try a different search term or category filter.</p>
+        </div>
+      )}
+
+      {!loading && !error && filtered.length > 0 && (
+        <div className="kb-table-container kb-table-card">
+          <table className="kb-table">
+            <thead>
+              <tr>
+                <th>Error Pattern</th>
+                <th>Category</th>
+                <th className="col-severity">Severity</th>
+                <th className="kb-actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((entry) => (
+                <tr key={entry.id}>
+                  <td>
+                    <div className="kb-pattern">{entry.errorPattern}</div>
+                    {(entry.rootCause || entry.solution) && (
+                      <div className="kb-pattern-meta">
+                        {entry.rootCause
+                          ? entry.rootCause.slice(0, 90) + (entry.rootCause.length > 90 ? '…' : '')
+                          : entry.solution.slice(0, 90) + (entry.solution.length > 90 ? '…' : '')}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <span className="kb-category-chip">{entry.category}</span>
+                  </td>
+                  <td className="col-severity">
+                    <SeverityBadge severity={entry.severity} />
+                  </td>
+                  <td className="kb-actions-col">
+                    <div className="kb-row-actions">
+                      <button
+                        type="button"
+                        className="kb-icon-btn"
+                        aria-label={`Edit entry: ${entry.errorPattern}`}
+                        title="Edit"
+                        onClick={(e) => openEditModal(entry, e.currentTarget)}
+                      >
+                        <Pencil size={15} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        className="kb-icon-btn kb-icon-btn-danger"
+                        aria-label={`Delete entry: ${entry.errorPattern}`}
+                        title="Delete"
+                        onClick={(e) => openDeleteModal(entry, e.currentTarget)}
+                      >
+                        <Trash2 size={15} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {isFormModalOpen && (
         <div
           role="presentation"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 500,
-          }}
+          className="kb-modal-backdrop"
           onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
         >
           <FocusTrap active={isFormModalOpen} onEscape={closeModal}>
@@ -309,50 +343,34 @@ export default function KnowledgeBasePage() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="form-modal-title"
-              style={{
-                backgroundColor: '#fff',
-                borderRadius: '8px',
-                padding: '24px',
-                width: '100%',
-                maxWidth: '540px',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                position: 'relative',
-              }}
+              className="kb-modal"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 id="form-modal-title" style={{ margin: 0 }}>
+              <div className="kb-modal-header">
+                <h2 id="form-modal-title">
                   {modalMode === 'add' ? 'Add Entry' : 'Edit Entry'}
                 </h2>
                 <button
                   type="button"
                   onClick={closeModal}
                   aria-label="Close dialog"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}
+                  className="kb-icon-btn"
                 >
-                  <X size={20} aria-hidden="true" />
+                  <X size={18} aria-hidden="true" />
                 </button>
               </div>
 
-              {/* Always rendered so screen readers register the live region before
-                  content changes (aria-live must pre-exist in the DOM). */}
               <p
                 id="kb-form-modal-error"
                 role="alert"
-                style={{
-                  color: '#b91c1c',
-                  marginBottom: modalError ? '16px' : 0,
-                  fontSize: '0.9em',
-                  minHeight: 0,
-                }}
+                className="kb-modal-error"
+                style={{ marginBottom: modalError ? '16px' : 0 }}
               >
-                {/* #b91c1c on #fff: ~6.5:1 — passes 4.5:1 ✓ */}
                 {modalError || ''}
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div>
-                  <label htmlFor="kb-errorPattern" style={LABEL_STYLE}>
+              <div className="kb-form-grid">
+                <div className="kb-field">
+                  <label htmlFor="kb-errorPattern">
                     Error Pattern <span aria-hidden="true">*</span>
                   </label>
                   <input
@@ -364,104 +382,74 @@ export default function KnowledgeBasePage() {
                     required
                     aria-required="true"
                     aria-describedby="kb-form-modal-error"
-                    style={INPUT_STYLE}
+                    placeholder="e.g. OutOfMemoryError, heap space"
                   />
                 </div>
 
-                <div>
-                  <label htmlFor="kb-category" style={LABEL_STYLE}>
-                    Category <span aria-hidden="true">*</span>
-                  </label>
-                  <input
-                    id="kb-category"
-                    name="category"
-                    type="text"
-                    value={formData.category}
-                    onChange={handleFormChange}
-                    required
-                    aria-required="true"
-                    aria-describedby="kb-form-modal-error"
-                    style={INPUT_STYLE}
-                  />
+                <div className="kb-field-row">
+                  <div className="kb-field">
+                    <label htmlFor="kb-category">
+                      Category <span aria-hidden="true">*</span>
+                    </label>
+                    <input
+                      id="kb-category"
+                      name="category"
+                      type="text"
+                      value={formData.category}
+                      onChange={handleFormChange}
+                      required
+                      aria-required="true"
+                      aria-describedby="kb-form-modal-error"
+                      placeholder="e.g. Memory"
+                    />
+                  </div>
+                  <div className="kb-field">
+                    <label htmlFor="kb-severity">Severity</label>
+                    <select
+                      id="kb-severity"
+                      name="severity"
+                      value={formData.severity}
+                      onChange={handleFormChange}
+                    >
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
+                      <option value="CRITICAL">Critical</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div>
-                  <label htmlFor="kb-severity" style={LABEL_STYLE}>Severity</label>
-                  <select
-                    id="kb-severity"
-                    name="severity"
-                    value={formData.severity}
-                    onChange={handleFormChange}
-                    style={INPUT_STYLE}
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="CRITICAL">Critical</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="kb-rootCause" style={LABEL_STYLE}>Root Cause</label>
+                <div className="kb-field">
+                  <label htmlFor="kb-rootCause">Root Cause</label>
                   <textarea
                     id="kb-rootCause"
                     name="rootCause"
                     value={formData.rootCause}
                     onChange={handleFormChange}
                     rows={3}
-                    style={INPUT_STYLE}
+                    placeholder="What typically causes this failure?"
                   />
                 </div>
 
-                <div>
-                  <label htmlFor="kb-solution" style={LABEL_STYLE}>Solution</label>
+                <div className="kb-field">
+                  <label htmlFor="kb-solution">Solution</label>
                   <textarea
                     id="kb-solution"
                     name="solution"
                     value={formData.solution}
                     onChange={handleFormChange}
                     rows={3}
-                    style={INPUT_STYLE}
+                    placeholder="Recommended remediation steps"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  disabled={saving}
-                  style={{
-                    padding: '8px 16px',
-                    // #64748b border on #fff: ~4.2:1 — passes 3:1 UI boundary ✓
-                    border: '1px solid #64748b',
-                    borderRadius: '4px',
-                    background: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '0.9em',
-                  }}
-                >
+              <div className="kb-modal-actions">
+                <button type="button" className="kb-btn kb-btn-secondary" onClick={closeModal} disabled={saving}>
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  style={{
-                    padding: '8px 16px',
-                    // Disabled state uses opacity (non-color visual cue) per AC5 ✓
-                    // #fff on #2563eb: ~4.95:1 — passes 4.5:1 ✓
-                    backgroundColor: '#2563eb',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: saving ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.9em',
-                    opacity: saving ? 0.5 : 1,
-                  }}
-                >
-                  {saving ? 'Saving...' : 'Save'}
+                <button type="button" className="kb-btn kb-btn-primary" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Saving…' : 'Save'}
                 </button>
               </div>
             </div>
@@ -469,19 +457,10 @@ export default function KnowledgeBasePage() {
         </div>
       )}
 
-      {/* Delete confirmation modal */}
       {isDeleteModalOpen && deleteEntry && (
         <div
           role="presentation"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 500,
-          }}
+          className="kb-modal-backdrop"
           onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
         >
           <FocusTrap active={isDeleteModalOpen} onEscape={closeModal}>
@@ -489,71 +468,32 @@ export default function KnowledgeBasePage() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="delete-modal-title"
-              style={{
-                backgroundColor: '#fff',
-                borderRadius: '8px',
-                padding: '24px',
-                width: '100%',
-                maxWidth: '440px',
-                position: 'relative',
-              }}
+              className="kb-modal kb-modal-sm"
             >
-              <h2 id="delete-modal-title" style={{ margin: '0 0 12px' }}>Delete Entry</h2>
-              {/* #475569 on #fff: ~7.6:1 — passes 4.5:1 ✓ */}
-              <p style={{ margin: '0 0 20px', color: '#475569' }}>
-                Are you sure you want to delete the entry for{' '}
-                <strong>{deleteEntry.errorPattern}</strong>? This action cannot be undone.
+              <div className="kb-delete-banner">
+                <AlertTriangle size={20} aria-hidden="true" />
+                <h2 id="delete-modal-title">Delete Entry</h2>
+              </div>
+              <p className="kb-delete-copy">
+                Are you sure you want to delete{' '}
+                <strong>{deleteEntry.errorPattern}</strong>? This cannot be undone.
               </p>
 
               <p
                 id="kb-delete-modal-error"
                 role="alert"
-                style={{
-                  color: '#b91c1c',
-                  marginBottom: modalError ? '16px' : 0,
-                  fontSize: '0.9em',
-                  minHeight: 0,
-                }}
+                className="kb-modal-error"
+                style={{ marginBottom: modalError ? '16px' : 0 }}
               >
-                {/* #b91c1c on #fff: ~6.5:1 — passes 4.5:1 ✓ */}
                 {modalError || ''}
               </p>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  disabled={saving}
-                  style={{
-                    padding: '8px 16px',
-                    border: '1px solid #64748b',
-                    borderRadius: '4px',
-                    background: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '0.9em',
-                  }}
-                >
+              <div className="kb-modal-actions">
+                <button type="button" className="kb-btn kb-btn-secondary" onClick={closeModal} disabled={saving}>
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={saving}
-                  style={{
-                    padding: '8px 16px',
-                    // #fff on #b91c1c: ~6.5:1 — passes 4.5:1 ✓
-                    // Disabled state uses opacity (non-color visual cue) per AC5 ✓
-                    backgroundColor: '#b91c1c',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: saving ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.9em',
-                    opacity: saving ? 0.5 : 1,
-                  }}
-                >
-                  {saving ? 'Deleting...' : 'Delete'}
+                <button type="button" className="kb-btn kb-btn-danger" onClick={handleDelete} disabled={saving}>
+                  {saving ? 'Deleting…' : 'Delete'}
                 </button>
               </div>
             </div>

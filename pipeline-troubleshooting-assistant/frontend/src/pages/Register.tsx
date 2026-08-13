@@ -59,6 +59,11 @@ const primaryBtnStyle: React.CSSProperties = {
   fontWeight: 500,
 };
 
+const PASSWORD_HINT =
+  'At least 12 characters, with uppercase, lowercase, a number, and a special character.';
+
+const PASSWORD_RULE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{12,}$/;
+
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -67,13 +72,18 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
     if (!email.trim()) errors.email = 'Email is required';
     if (!displayName.trim()) errors.displayName = 'Display name is required';
-    if (!password) errors.password = 'Password is required';
+    if (!password) {
+      errors.password = 'Password is required';
+    } else if (!PASSWORD_RULE.test(password)) {
+      errors.password = PASSWORD_HINT;
+    }
     if (!confirmPassword) {
       errors.confirmPassword = 'Please confirm your password';
     } else if (password && password !== confirmPassword) {
@@ -95,8 +105,16 @@ export default function RegisterPage() {
         displayName: displayName.trim(),
       });
       setSuccess(response.message);
+      setVerificationUrl(response.verificationUrl ?? null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Registration failed. Please try again.');
+      if (err instanceof ApiError) {
+        if (Object.keys(err.fieldErrors).length > 0) {
+          setFieldErrors(err.fieldErrors);
+        }
+        setError(err.message);
+      } else {
+        setError('Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -107,7 +125,33 @@ export default function RegisterPage() {
       <div style={cardContainerStyle}>
         <div style={cardStyle}>
           <h1 style={{ margin: '0 0 16px', fontSize: '1.5rem', color: '#111827' }}>Registration Successful</h1>
-          <p role="status" style={{ color: '#15803d', marginBottom: '24px' }}>{success}</p>
+          <p role="status" style={{ color: '#15803d', marginBottom: '16px' }}>{success}</p>
+          {verificationUrl ? (
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ color: '#475569', fontSize: '0.9em', marginBottom: '12px' }}>
+                Local development does not send real email. Use this link to verify your account:
+              </p>
+              <a
+                href={verificationUrl}
+                style={{
+                  ...primaryBtnStyle,
+                  display: 'inline-block',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                Verify email now
+              </a>
+              <p style={{ marginTop: '12px', wordBreak: 'break-all', fontSize: '0.75em', color: '#64748b' }}>
+                {verificationUrl}
+              </p>
+            </div>
+          ) : (
+            <p style={{ color: '#475569', fontSize: '0.9em', marginBottom: '24px' }}>
+              Check your inbox for a verification link, then sign in.
+            </p>
+          )}
           <p style={{ color: '#475569', fontSize: '0.9em' }}>
             <a href="/login" style={{ color: '#1d4ed8' }}>Sign in to your account</a>
           </p>
@@ -174,12 +218,15 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={inputStyle}
-              placeholder="••••••••"
+              placeholder="••••••••••••"
               autoComplete="new-password"
               disabled={loading}
               aria-invalid={fieldErrors.password ? 'true' : undefined}
-              aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+              aria-describedby={fieldErrors.password ? 'password-error' : 'password-hint'}
             />
+            <p id="password-hint" style={{ margin: '6px 0 0', color: '#475569', fontSize: '0.8em' }}>
+              {PASSWORD_HINT}
+            </p>
             {fieldErrors.password && (
               <p id="password-error" role="alert" style={errorTextStyle}>{fieldErrors.password}</p>
             )}

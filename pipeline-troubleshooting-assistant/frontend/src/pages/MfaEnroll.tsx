@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { mfaSetup, mfaVerify, ApiError } from '../api';
 import type { MfaSetupResponse } from '../types';
 
@@ -215,14 +216,35 @@ export default function MfaEnrollPage() {
           Set Up Two-Factor Authentication
         </h1>
         <p style={{ margin: '0 0 24px', color: '#475569', fontSize: '0.9em' }}>
-          Scan the QR code URI with your authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code to confirm.
+          Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code to confirm.
         </p>
 
         {setupData && (
           <>
-            <div style={{ marginBottom: '24px' }}>
-              <p style={{ margin: '0 0 8px', fontWeight: 500, color: '#111827', fontSize: '0.9em' }}>
-                QR Code URI — copy this into your authenticator app
+            <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+              <div
+                role="img"
+                aria-label="QR code for authenticator app"
+                style={{
+                  display: 'inline-block',
+                  padding: '16px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  marginBottom: '12px',
+                }}
+              >
+                <QRCodeSVG
+                  value={setupData.qrCodeUri}
+                  size={200}
+                  level="M"
+                  includeMargin={false}
+                  bgColor="#ffffff"
+                  fgColor="#111827"
+                />
+              </div>
+              <p style={{ margin: '0 0 8px', fontWeight: 500, color: '#111827', fontSize: '0.9em', textAlign: 'left' }}>
+                Or enter this URI manually
               </p>
               <div style={{ position: 'relative' }}>
                 <textarea

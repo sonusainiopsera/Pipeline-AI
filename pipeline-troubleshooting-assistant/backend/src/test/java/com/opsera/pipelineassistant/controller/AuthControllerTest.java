@@ -1,10 +1,13 @@
 package com.opsera.pipelineassistant.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opsera.pipelineassistant.dto.Responses.RegistrationResult;
 import com.opsera.pipelineassistant.dto.RegisterRequest;
 import com.opsera.pipelineassistant.fixtures.RegisterRequestFixtures;
+import com.opsera.pipelineassistant.model.User;
 import com.opsera.pipelineassistant.security.CustomUserDetailsService;
 import com.opsera.pipelineassistant.security.JwtTokenProvider;
+import com.opsera.pipelineassistant.security.MfaService;
 import com.opsera.pipelineassistant.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +38,9 @@ class AuthControllerTest {
     private AuthService authService;
 
     @MockBean
+    private MfaService mfaService;
+
+    @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
     @MockBean
@@ -44,7 +50,10 @@ class AuthControllerTest {
 
     @Test
     void register_validRequest_returns201WithMessage() throws Exception {
-        when(authService.register(anyString(), anyString(), anyString())).thenReturn(null);
+        when(authService.register(anyString(), anyString(), anyString()))
+                .thenReturn(new RegistrationResult(
+                        User.builder().email("user@example.com").build(),
+                        "http://localhost:5173/api/auth/verify?token=abc"));
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

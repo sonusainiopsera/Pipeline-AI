@@ -1,8 +1,13 @@
 .git
 node_modules
-dist
 .idea
 .vscode
 *.md
 .env
 *.log
+src
+tests
+playwright.config.ts
+tsconfig.json
+tsconfig.node.json
+vite.config.ts

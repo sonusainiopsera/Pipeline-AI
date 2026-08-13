@@ -86,11 +86,30 @@ public final class Responses {
         }
     }
 
-    public record RegisterResponse(String message) {}
+    public record RegisterResponse(String message, String verificationUrl) {}
+
+    /** Outcome of registration, including the verification URL for local/dev clients. */
+    public record RegistrationResult(User user, String verificationUrl) {}
 
     public record RefreshResult(String accessToken, String refreshToken) {}
 
-    public record LoginResponse(String email, String displayName, String role, boolean mfaRequired) {}
+    public record LoginResponse(
+            String email,
+            String displayName,
+            String role,
+            boolean mfaRequired,
+            boolean mfaEnabled
+    ) {
+        public static LoginResponse from(User user, boolean mfaRequired) {
+            return new LoginResponse(
+                    user.getEmail(),
+                    user.getDisplayName(),
+                    user.getRole().name(),
+                    mfaRequired,
+                    Boolean.TRUE.equals(user.getMfaEnabled())
+            );
+        }
+    }
 
     public record LoginResult(String accessToken, String rawRefreshToken, LoginResponse profile, String challengeToken) {}
 

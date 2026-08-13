@@ -39,10 +39,11 @@ describe('MfaEnrollPage setup phase', () => {
     await waitFor(() => expect(mfaSetupMock).toHaveBeenCalledOnce());
   });
 
-  it('renders the QR code URI from setup response', async () => {
+  it('renders the QR code and URI from setup response', async () => {
     mfaSetupMock.mockResolvedValue(mfaSetupResponse);
     render(<MfaEnrollPage />);
     await waitFor(() => {
+      expect(screen.getByRole('img', { name: /qr code for authenticator app/i })).toBeInTheDocument();
       expect(screen.getByDisplayValue(mfaSetupResponse.qrCodeUri)).toBeInTheDocument();
     });
   });
